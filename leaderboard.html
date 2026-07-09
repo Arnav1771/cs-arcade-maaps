@@ -83,7 +83,7 @@
       <button id="exportBtn">⬇ Export CSV</button>
       <button id="resetBtn" class="danger">🗑 Reset Leaderboard</button>
     </div>
-    <p class="note">Scores are saved on this device. Click any row to see that student's per-game scores.</p>
+    <p class="note">Each game is scored out of <b>1000</b> (how far you climb in the time limit); a student's session total is their <b>4 chosen games = /4000</b>, so every game counts equally. Scores are saved on this device. Click any row to see per-game scores (★ = chosen games).</p>
   </div>
 
   <script src="assets/js/audio.js"></script>
@@ -122,9 +122,9 @@
         html += '<tr class="prow' + meCls + '" data-i="' + i + '">' +
           '<td class="rank">' + (i + 1) + '</td>' +
           '<td class="pname">' + esc(r.name) + (r.name === me ? ' <span style="color:#a3e635">(you)</span>' : '') + '</td>' +
-          '<td class="total">' + r.total + '</td>' +
+          '<td class="total">' + r.total + '<span style="color:var(--muted);font-weight:600;font-size:12px"> /4000</span></td>' +
           '<td class="plays">' + r.plays + '</td></tr>' +
-          '<tr class="detail" id="d' + i + '" hidden><td colspan="4"><div class="chips">' + chips(r.games) + '</div></td></tr>';
+          '<tr class="detail" id="d' + i + '" hidden><td colspan="4"><div class="chips">' + chips(r) + '</div></td></tr>';
       });
       html += '</tbody></table>';
       tableWrap.innerHTML = html;
@@ -137,13 +137,20 @@
       });
     }
 
-    function chips(games) {
-      var keys = Object.keys(games || {});
-      if (!keys.length) return '<span class="chip">No games played yet</span>';
-      keys.sort(function (a, b) { return games[b] - games[a]; });
-      return keys.map(function (s) {
+    function chips(row) {
+      var games = row.games || {}, mission = row.mission || [];
+      // show the 4 chosen "mission" games first (marked ★), then any others played
+      var keys = Object.keys(games);
+      var order = mission.concat(keys.filter(function (k) { return mission.indexOf(k) < 0; }));
+      if (mission.length) order = mission.concat(keys.filter(function (k) { return mission.indexOf(k) < 0; }));
+      else { order = keys.slice().sort(function (a, b) { return games[b] - games[a]; }); }
+      if (!order.length) return '<span class="chip">No games played yet</span>';
+      return order.map(function (s) {
         var t = TITLES[s] || { title: s, icon: '🎮' };
-        return '<span class="chip">' + t.icon + ' ' + esc(t.title) + ' <b>' + games[s] + '</b></span>';
+        var inM = mission.indexOf(s) >= 0;
+        var pts = games[s] || 0;
+        return '<span class="chip"' + (inM ? ' style="border-color:var(--gold)"' : '') + '>' +
+          (inM ? '★ ' : '') + t.icon + ' ' + esc(t.title) + ' <b>' + pts + '</b>/1000</span>';
       }).join('');
     }
 

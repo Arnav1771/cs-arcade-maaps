@@ -10,8 +10,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
-    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; color: var(--ink);
     background:
       radial-gradient(1200px 600px at 15% -10%, rgba(56,189,248,0.18), transparent 60%),
       radial-gradient(1000px 500px at 100% 0%, rgba(168,85,247,0.18), transparent 55%),
@@ -21,92 +20,75 @@
   }
   body::before {
     content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(circle at 50% 30%, black, transparent 85%);
-    animation: drift 40s linear infinite;
+    background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 44px 44px; mask-image: radial-gradient(circle at 50% 30%, black, transparent 85%); animation: drift 40s linear infinite;
   }
   @keyframes drift { to { background-position: 440px 440px; } }
 
-  header { position: relative; z-index: 1; text-align: center; padding: 40px 20px 6px; max-width: 1100px; margin: 0 auto; }
-  .school {
-    display: inline-flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: 2px;
-    text-transform: uppercase; color: var(--muted); font-weight: 700;
-    border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; background: rgba(255,255,255,0.03);
-  }
-  h1 {
-    font-size: clamp(38px, 8vw, 76px); margin: 16px 0 6px; font-weight: 900; letter-spacing: -1px; line-height: 1;
-    background: linear-gradient(100deg, #38bdf8, #a855f7 45%, #f43f5e);
-    -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 0 60px rgba(56,189,248,0.25);
-  }
+  header { position: relative; z-index: 1; text-align: center; padding: 36px 20px 6px; max-width: 1100px; margin: 0 auto; }
+  .school { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; background: rgba(255,255,255,0.03); }
+  h1 { font-size: clamp(36px, 8vw, 72px); margin: 14px 0 6px; font-weight: 900; letter-spacing: -1px; line-height: 1; background: linear-gradient(100deg, #38bdf8, #a855f7 45%, #f43f5e); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 0 60px rgba(56,189,248,0.25); }
   .tagline { color: var(--ink); font-size: clamp(15px, 2.6vw, 19px); opacity: .9; margin: 0 0 4px; }
-  .sub { color: var(--muted); font-size: 14px; margin: 0; }
 
-  .controls { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin: 20px 12px 6px; position: relative; z-index: 1; }
-  .pill {
-    cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink);
-    background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 999px;
-    padding: 9px 18px; transition: transform .15s, border-color .2s; text-decoration: none; display:inline-flex; align-items:center; gap:8px;
-  }
+  .controls { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin: 18px 12px 4px; position: relative; z-index: 1; }
+  .pill { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink); background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 999px; padding: 9px 18px; transition: transform .15s, border-color .2s; text-decoration: none; display:inline-flex; align-items:center; gap:8px; }
   .pill:hover { transform: translateY(-2px); border-color: #38bdf8; }
   .pill.lb { border-color: #fbbf24; color: #ffe9a6; }
-  .pill.player { border-color: #a3e635; }
-  .pill.player b { color: #d7ff9e; }
+  .pill.player { border-color: #a3e635; } .pill.player b { color: #d7ff9e; }
 
-  .grid {
-    position: relative; z-index: 1; max-width: 1180px; margin: 24px auto 60px; padding: 0 20px;
-    display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  }
-  .card {
-    position: relative; display: block; text-decoration: none; color: inherit;
-    background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 22px 20px 20px;
-    overflow: hidden; transition: transform .18s ease, border-color .2s ease, box-shadow .25s ease; isolation: isolate;
-  }
-  .card::before {
-    content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0;
-    background: radial-gradient(400px 200px at 50% -30%, var(--glow), transparent 70%); transition: opacity .25s ease;
-  }
+  /* instruction banner (changes by mode) */
+  .banner { position: relative; z-index: 1; max-width: 820px; margin: 16px auto 0; padding: 0 20px; text-align: center; }
+  .banner .box { border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; background: rgba(255,255,255,0.04); }
+  .banner b { color: #7dd3fc; }
+  .banner .steps { color: var(--muted); font-size: 13.5px; margin-top: 6px; line-height: 1.5; }
+
+  .grid { position: relative; z-index: 1; max-width: 1180px; margin: 18px auto 120px; padding: 0 20px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  .card { position: relative; display: block; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px 18px 18px; overflow: hidden; transition: transform .18s ease, border-color .2s ease, box-shadow .25s ease, opacity .2s; isolation: isolate; cursor: pointer; }
+  .card::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; background: radial-gradient(400px 200px at 50% -30%, var(--glow), transparent 70%); transition: opacity .25s ease; }
   .card:hover { transform: translateY(-6px); border-color: var(--glow); box-shadow: 0 18px 40px rgba(0,0,0,0.45); }
   .card:hover::before { opacity: 1; }
-  .num { position: absolute; top: 14px; right: 16px; font-size: 12px; font-weight: 800; color: var(--muted); opacity: .6; }
-  .icon { font-size: 40px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
-  .card h3 { margin: 12px 0 4px; font-size: 19px; font-weight: 800; }
-  .card p { margin: 0 0 12px; color: var(--muted); font-size: 13px; line-height: 1.45; min-height: 36px; }
-  .tag {
-    display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--glow);
-    border: 1px solid var(--glow); border-radius: 999px; padding: 4px 10px; background: color-mix(in srgb, var(--glow) 12%, transparent);
-  }
-  .play { position: absolute; bottom: 18px; right: 18px; font-size: 13px; font-weight: 800; color: var(--ink); opacity: 0; transform: translateX(-6px); transition: .2s; }
+  .num { position: absolute; top: 12px; right: 14px; font-size: 12px; font-weight: 800; color: var(--muted); opacity: .6; }
+  .icon { font-size: 38px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+  .card h3 { margin: 10px 0 4px; font-size: 18px; font-weight: 800; }
+  .card p { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; line-height: 1.4; min-height: 34px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--glow); border: 1px solid var(--glow); border-radius: 999px; padding: 4px 10px; background: color-mix(in srgb, var(--glow) 12%, transparent); }
+  /* selection state */
+  .card .check { position: absolute; top: 10px; left: 12px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); display: none; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #041018; }
+  body.mode-select .card { cursor: pointer; }
+  body.mode-select .card .play { display: none; }
+  body.mode-select .card .check { display: flex; }
+  .card.sel { border-color: var(--glow); box-shadow: 0 0 0 2px var(--glow) inset, 0 14px 34px rgba(0,0,0,.4); }
+  .card.sel .check { background: var(--glow); border-color: var(--glow); }
+  body.mode-select.full .card:not(.sel) { opacity: .45; }
+  /* play state: mission cards get a star ribbon */
+  .card .star { position: absolute; top: 10px; left: 0; display: none; font-size: 11px; font-weight: 800; color: #041018; background: #a3e635; padding: 4px 10px 4px 12px; border-radius: 0 999px 999px 0; }
+  body.mode-play .card.inmission .star { display: inline-block; }
+  .play { position: absolute; bottom: 16px; right: 16px; font-size: 13px; font-weight: 800; color: var(--ink); opacity: 0; transform: translateX(-6px); transition: .2s; }
   .card:hover .play { opacity: 1; transform: translateX(0); }
 
-  footer { position: relative; z-index: 1; text-align: center; color: var(--muted); font-size: 13px; padding: 10px 20px 46px; line-height: 1.7; }
+  /* confirm bar (select mode) */
+  .confirm { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: none; justify-content: center; padding: 14px; background: linear-gradient(0deg, rgba(7,11,26,0.97), rgba(7,11,26,0.0)); }
+  body.mode-select .confirm { display: flex; }
+  .confirm .inner { display: flex; align-items: center; gap: 14px; background: #0d1430; border: 1px solid var(--line); border-radius: 999px; padding: 10px 12px 10px 20px; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+  .confirm .count { font-weight: 800; font-size: 14px; }
+  .confirm .count b { color: #7dd3fc; font-size: 18px; }
+  .confirm button { cursor: pointer; font-size: 15px; font-weight: 800; padding: 12px 22px; border: none; border-radius: 999px; color: #041018; background: linear-gradient(100deg, #38bdf8, #a855f7); transition: transform .15s, opacity .2s; }
+  .confirm button:disabled { opacity: .4; cursor: not-allowed; }
+  .confirm button:not(:disabled):hover { transform: translateY(-2px); }
+
+  footer { position: relative; z-index: 1; text-align: center; color: var(--muted); font-size: 13px; padding: 4px 20px 40px; line-height: 1.7; }
   .credits { margin-top: 8px; font-size: 12px; opacity: .8; }
 
-  /* name-gate modal */
-  .overlay {
-    position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 20px;
-    background: rgba(4,7,18,0.86); backdrop-filter: blur(8px);
-  }
+  .overlay { position: fixed; inset: 0; z-index: 10001; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(4,7,18,0.86); backdrop-filter: blur(8px); }
   .overlay[hidden] { display: none; }
-  .gate {
-    width: min(440px, 94vw); background: linear-gradient(160deg, #101833, #0a0f22); border: 1px solid var(--line);
-    border-radius: 22px; padding: 30px 26px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.6);
-  }
+  .gate { width: min(440px, 94vw); background: linear-gradient(160deg, #101833, #0a0f22); border: 1px solid var(--line); border-radius: 22px; padding: 30px 26px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
   .gate .big { font-size: 46px; margin-bottom: 6px; }
   .gate h2 { margin: 4px 0 6px; font-size: 24px; }
   .gate p { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
-  .gate input {
-    width: 100%; font-size: 18px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line);
-    background: rgba(255,255,255,0.06); color: var(--ink); text-align: center; outline: none; margin-bottom: 14px;
-  }
+  .gate input { width: 100%; font-size: 18px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,0.06); color: var(--ink); text-align: center; outline: none; margin-bottom: 14px; }
   .gate input:focus { border-color: #38bdf8; }
-  .gate button {
-    width: 100%; font-size: 17px; font-weight: 800; padding: 14px; border-radius: 14px; border: none; cursor: pointer;
-    color: #041018; background: linear-gradient(100deg, #38bdf8, #a855f7); transition: transform .15s; }
+  .gate button { width: 100%; font-size: 17px; font-weight: 800; padding: 14px; border-radius: 14px; border: none; cursor: pointer; color: #041018; background: linear-gradient(100deg, #38bdf8, #a855f7); transition: transform .15s; }
   .gate button:hover { transform: translateY(-2px); }
-  .gate .skip { background: none; color: var(--muted); font-weight: 600; font-size: 12px; margin-top: 10px; padding: 6px; }
 </style>
 </head>
 <body>
@@ -114,31 +96,36 @@
     <span class="school">🏫 Maharaja Aggarsain Adarsh Public School</span>
     <h1>CS&nbsp;ARCADE</h1>
     <p class="tagline">Fifteen mini-games that make computer science click.</p>
-    <p class="sub">Science Exhibition • Pick a game and start playing — no install, works right in the browser.</p>
   </header>
 
   <div class="controls">
     <button id="sound" class="pill">🔊 Sound: On</button>
     <a href="leaderboard.html" class="pill lb">🏆 Leaderboard</a>
-    <button id="playerBtn" class="pill player" title="Change player">👤 Playing as <b id="playerName">Guest</b></button>
+    <button id="playerBtn" class="pill player" title="Change player">👤 <b id="playerName">Guest</b></button>
+    <button id="changeMission" class="pill" style="display:none">🎯 Change my 4</button>
   </div>
+
+  <div class="banner"><div class="box" id="bannerBox"></div></div>
 
   <main class="grid" id="grid"></main>
 
+  <div class="confirm"><div class="inner">
+    <span class="count">Picked <b id="selCount">0</b> / 4 games</span>
+    <button id="confirmBtn" disabled>Start my 4 games ▶</button>
+  </div></div>
+
   <footer>
-    Built for the school science exhibition • 15 games • Works offline once loaded<br />
+    Built for the school science exhibition • 15 games • Each game is timed &amp; scored out of 1000 — fair for everyone.<br />
     <span class="credits">Sound effects: “512 Retro Game Sounds” by Juhani Junkala / SubspaceAudio (CC0, public domain) + synthesized WebAudio.</span>
   </footer>
 
-  <!-- name gate -->
   <div class="overlay" id="gate" hidden>
     <div class="gate">
       <div class="big">🎮</div>
       <h2>Welcome to CS Arcade!</h2>
       <p>Enter your name so your scores appear on the leaderboard.</p>
       <input id="nameInput" type="text" maxlength="24" placeholder="Type your name…" autocomplete="off" />
-      <button id="startBtn">Start Playing ▶</button>
-      <button id="skipBtn" class="skip">Skip — just let me play as Guest</button>
+      <button id="startBtn">Continue ▶</button>
     </div>
   </div>
 
@@ -146,53 +133,126 @@
   <script src="assets/js/arcade.js"></script>
   <script src="assets/js/games.js"></script>
   <script>
-    // ---- render game cards from the shared catalogue ----
     var grid = document.getElementById('grid');
-    CS_GAMES.forEach(function (g, i) {
-      var a = document.createElement('a');
-      a.className = 'card';
-      a.href = 'games/' + g.slug + '/index.html';
-      a.style.setProperty('--glow', g.glow);
-      a.innerHTML =
-        '<span class="num">' + String(i + 1).padStart(2, '0') + '</span>' +
-        '<div class="icon">' + g.icon + '</div>' +
-        '<h3>' + g.title + '</h3>' +
-        '<p>' + g.desc + '</p>' +
-        '<span class="tag">' + g.tag + '</span>' +
-        '<span class="play">Play ▶</span>';
-      a.addEventListener('mouseenter', function () { SFX.play('hover'); });
-      a.addEventListener('click', function () { SFX.play('select'); });
-      grid.appendChild(a);
+    var bannerBox = document.getElementById('bannerBox');
+    var selCountEl = document.getElementById('selCount');
+    var confirmBtn = document.getElementById('confirmBtn');
+    var changeMissionBtn = document.getElementById('changeMission');
+    var mode = 'play';                 // 'select' | 'play'
+    var selected = [];                 // slugs chosen this session
+
+    function bySlug(s) { for (var i = 0; i < CS_GAMES.length; i++) if (CS_GAMES[i].slug === s) return CS_GAMES[i]; return null; }
+
+    function buildCards() {
+      grid.innerHTML = '';
+      CS_GAMES.forEach(function (g, i) {
+        var a = document.createElement('a');
+        a.className = 'card';
+        a.href = 'games/' + g.slug + '/index.html';
+        a.setAttribute('data-slug', g.slug);
+        a.style.setProperty('--glow', g.glow);
+        a.innerHTML =
+          '<span class="check"></span>' +
+          '<span class="star">★ In your 4</span>' +
+          '<span class="num">' + String(i + 1).padStart(2, '0') + '</span>' +
+          '<div class="icon">' + g.icon + '</div>' +
+          '<h3>' + g.title + '</h3>' +
+          '<p>' + g.desc + '</p>' +
+          '<span class="tag">' + g.tag + '</span>' +
+          '<span class="play">Play ▶</span>';
+        a.addEventListener('mouseenter', function () { SFX.play('hover'); });
+        a.addEventListener('click', function (e) {
+          if (mode === 'select') { e.preventDefault(); toggleSelect(g.slug); }
+          else { SFX.play('select'); }
+        });
+        grid.appendChild(a);
+      });
+      paintCards();
+    }
+
+    function toggleSelect(slug) {
+      var idx = selected.indexOf(slug);
+      if (idx >= 0) { selected.splice(idx, 1); SFX.play('click'); }
+      else {
+        if (selected.length >= 4) { SFX.play('error'); return; }
+        selected.push(slug); SFX.play('coin');
+      }
+      paintCards();
+    }
+
+    function paintCards() {
+      document.body.classList.toggle('full', selected.length >= 4);
+      var cards = grid.querySelectorAll('.card');
+      Array.prototype.forEach.call(cards, function (c) {
+        var s = c.getAttribute('data-slug');
+        var chosen = selected.indexOf(s) >= 0;
+        c.classList.toggle('sel', chosen && mode === 'select');
+        c.classList.toggle('inmission', chosen && mode === 'play');
+        var chk = c.querySelector('.check'); if (chk) chk.textContent = chosen ? '✓' : '';
+      });
+      selCountEl.textContent = selected.length;
+      confirmBtn.disabled = selected.length !== 4;
+    }
+
+    function setMode(m) {
+      mode = m;
+      document.body.classList.toggle('mode-select', m === 'select');
+      document.body.classList.toggle('mode-play', m === 'play');
+      changeMissionBtn.style.display = (m === 'play') ? '' : 'none';
+      if (m === 'select') {
+        bannerBox.innerHTML = '<b>🎯 Pick any 4 games for your session.</b>' +
+          '<div class="steps">Tap 4 game cards below, then press <b>Start my 4 games</b>. ' +
+          'Each game is timed and scored out of 1000 points — so every game counts equally and it\'s a fair contest no matter which 4 you choose.</div>';
+      } else {
+        var names = selected.map(function (s) { var g = bySlug(s); return g ? (g.icon + ' ' + g.title) : s; });
+        bannerBox.innerHTML = '<b>🎮 Your 4 games this session:</b><div class="steps">' +
+          (names.length ? names.join('&nbsp; • &nbsp;') : '—') +
+          '<br>Play them, beat the timer, and climb the <b>Leaderboard</b>. Tap “Change my 4” to reshuffle your picks.</div>';
+      }
+      paintCards();
+    }
+
+    function enterSelect() { selected = Arcade.getMission().slice(0, 4); setMode('select'); }
+    function enterPlay() { selected = Arcade.getMission().slice(0, 4); setMode('play'); }
+
+    confirmBtn.addEventListener('click', function () {
+      if (selected.length !== 4) return;
+      Arcade.setMission(selected); SFX.play('start'); Arcade.confetti(900); enterPlay();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+    changeMissionBtn.addEventListener('click', function () { SFX.play('click'); enterSelect(); });
 
     // ---- sound toggle ----
-    var btn = document.getElementById('sound');
-    function paintSound() { btn.textContent = SFX.isMuted() ? '🔇 Sound: Off' : '🔊 Sound: On'; }
+    var sbtn = document.getElementById('sound');
+    function paintSound() { sbtn.textContent = SFX.isMuted() ? '🔇 Sound: Off' : '🔊 Sound: On'; }
     paintSound();
-    btn.addEventListener('click', function () { SFX.toggleMute(); if (!SFX.isMuted()) SFX.play('button'); paintSound(); });
+    sbtn.addEventListener('click', function () { SFX.toggleMute(); if (!SFX.isMuted()) SFX.play('button'); paintSound(); });
     window.addEventListener('sfxmutechange', paintSound);
 
-    // ---- player name gate + chip ----
+    // ---- name gate ----
     var gate = document.getElementById('gate');
     var nameInput = document.getElementById('nameInput');
     var playerNameEl = document.getElementById('playerName');
     function paintPlayer() { playerNameEl.textContent = Arcade.getPlayer() || 'Guest'; }
-    function openGate() { gate.hidden = false; setTimeout(function () { nameInput.focus(); }, 50); }
-    function closeGate() { gate.hidden = true; }
     function submitName() {
       var v = nameInput.value.trim();
-      if (v) { Arcade.setPlayer(v); SFX.play('start'); Arcade.confetti(900); }
-      paintPlayer(); closeGate();
+      if (v) { Arcade.setPlayer(v); SFX.play('select'); }
+      paintPlayer(); gate.hidden = true;
+      // after naming, always let them (re)pick their 4
+      enterSelect();
     }
     document.getElementById('startBtn').addEventListener('click', submitName);
     nameInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitName(); });
-    document.getElementById('skipBtn').addEventListener('click', function () { SFX.play('click'); closeGate(); });
     document.getElementById('playerBtn').addEventListener('click', function () {
-      SFX.play('click'); nameInput.value = Arcade.getPlayer() || ''; openGate();
+      SFX.play('click'); nameInput.value = Arcade.getPlayer() || ''; gate.hidden = false; setTimeout(function () { nameInput.focus(); }, 50);
     });
 
+    // ---- boot ----
+    buildCards();
     paintPlayer();
-    if (!Arcade.getPlayer()) openGate();   // ask for a name on first arrival
+    if (!Arcade.getPlayer()) { gate.hidden = false; setTimeout(function () { nameInput.focus(); }, 50); }
+    else if (Arcade.getMission().length === 4) enterPlay();
+    else enterSelect();
   </script>
 </body>
 </html>

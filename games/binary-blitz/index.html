@@ -464,7 +464,7 @@
 
   function victory() {
     cancelAnimationFrame(rafId);
-    Arcade.best(SLUG, score);
+    Arcade.best(SLUG, score, 20);
     $("winScore").textContent = score;
     $("winBest").textContent = Arcade.best(SLUG);
     show(winScreen);
@@ -474,7 +474,7 @@
 
   function gameOver() {
     cancelAnimationFrame(rafId);
-    var isBest = Arcade.best(SLUG, score);
+    var isBest = Arcade.best(SLUG, score, level);
     $("finalScore").textContent = score;
     $("finalBest").textContent = Arcade.best(SLUG);
     $("finalSolved").textContent = solved;

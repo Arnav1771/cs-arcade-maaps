@@ -7,20 +7,33 @@ offline once the page has loaded.
 
 **▶ Live site:** _enabled via GitHub Pages (see below)._
 
-## The 10 games
+## The 15 games
 
 | # | Game | What it teaches |
 |---|------|-----------------|
 | 1 | 🔢 **Binary Blitz** | Binary numbers — flip bits to match a decimal number |
-| 2 | 💡 **Logic Lab** | Logic gates (AND / OR / NOT / XOR) — light the bulb |
+| 2 | 💡 **Logic Lab** | Logic gates (AND / OR / NOT / XOR…) — light the bulb |
 | 3 | 🤖 **Robot Runner** | Algorithms & sequencing — program a robot through a maze |
 | 4 | ⌨️ **Type Rush** | Keyboard skills + computer vocabulary |
 | 5 | 🧠 **Memory Matrix** | Memory/recall — match tech-gadget pairs |
-| 6 | 🎨 **Hex Hunter** | How computers store colour (RGB / hex codes) |
+| 6 | 2️⃣ **2048** | Powers of two (2·4·8·16…) — the maths behind binary |
 | 7 | 📊 **Sort It Out** | Sorting — arrange the bars in order |
-| 8 | ❓ **CS Quiz Quest** | Computer-basics trivia |
+| 8 | ❓ **CS Quiz Quest** | Computer-basics trivia (reshuffled per student) |
 | 9 | 🔐 **Cipher Crack** | Encryption — crack the Caesar cipher |
 | 10 | 🎵 **Simon Signals** | Patterns & memory — watch and repeat |
+| 11 | 🥷 **Number Ninja** | Fast mental maths |
+| 12 | 🧙 **Word Wizard** | Spelling & science/computer vocabulary |
+| 13 | 🐛 **Bug Squash** | A playful intro to debugging |
+| 14 | 🗼 **Tower Master** | Tower of Hanoi — planning & problem solving |
+| 15 | 🔷 **Pattern Quest** | Pattern recognition & logic |
+
+Every game has **20 levels** of rising difficulty and its own theme.
+
+## Exhibition mode — fair scoring & leaderboard
+
+- On arrival each student **enters their name** and **picks any 4 games** for their session.
+- Every game runs on an equal **90-second timer** and is scored **out of 1000** by how far the student climbs — so no game is "worth more". A student's session total is their **4 games = /4000**.
+- A **How-to-Play tutorial** pops up when each game opens; the **Leaderboard** page ranks every student (podium + per-game breakdown, export to CSV, reset at day's end). Stored on the booth device — no internet needed.
 
 ## How it's built
 

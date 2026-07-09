@@ -383,6 +383,7 @@
       '<p>Nice sequencing! Ready for a trickier maze?</p><div class="score-big">'+totalScore+'</div><p>total points</p>',
       'Next Level ▶', function(){
         hide(); lvl++; program=[]; pendingRep=1; tries=0; clearRepUI(); setHint('');
+        Arcade.report(SLUG, lvl + 1, 20);   // fair partial-progress capture
         renderProgram(); buildBoard();
         document.getElementById('levelPill').textContent='Level '+(lvl+1)+' / '+LEVELS.length;
         msg('New maze! Build your program, then RUN ▶','');
@@ -390,7 +391,7 @@
   }
 
   function gameOver(){
-    var isBest=Arcade.best(SLUG, totalScore);
+    var isBest=Arcade.best(SLUG, totalScore, 20);
     var best=Arcade.best(SLUG);
     document.getElementById('bestPill').textContent='Best '+best;
     SFX.play('fanfare'); Arcade.confetti(2200);

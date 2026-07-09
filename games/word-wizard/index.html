@@ -442,6 +442,7 @@
       if (wordSlot >= WORDS_PER_LEVEL) {          // level cleared
         if (level >= 20) { winGame(); return; }
         level++;
+        Arcade.report(SLUG, level, 20);   // fair partial-progress capture
         SFX.play('powerup');
         setTimeout(startLevel, 220);
       } else {
@@ -464,7 +465,7 @@
   function winGame() {
     SFX.play('win');
     setTimeout(function () { SFX.play('fanfare'); }, 380);
-    var isNew = Arcade.best(SLUG, score);   // record final score once (feeds leaderboard)
+    var isNew = Arcade.best(SLUG, score, 20);   // record final score once (feeds leaderboard)
     $('endTag').textContent = 'Grand Wizard';
     $('endTitle').textContent = '🏆 Word Wizard!';
     $('endMsg').textContent = 'You cleared all 20 levels and mastered the ancient spellbook of science & computer words.';

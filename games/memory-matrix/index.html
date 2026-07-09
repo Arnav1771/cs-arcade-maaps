@@ -463,7 +463,7 @@
       var s = computeScore();
       totalScore += s;
       scoreEl.textContent = totalScore;
-      Arcade.best(SLUG, totalScore); // persist climb progress to the leaderboard
+      Arcade.best(SLUG, totalScore, level + 1); // persist climb progress to the leaderboard (fair)
 
       if (level >= 19) { grandVictory(); return; }
 
@@ -477,7 +477,7 @@
       playing = false;
       locked = true;
       var finalScore = totalScore;
-      var isBest = Arcade.best(SLUG, finalScore);
+      var isBest = Arcade.best(SLUG, finalScore, 20);
 
       document.getElementById('wScore').textContent = finalScore;
       document.getElementById('wBest').textContent = Arcade.best(SLUG);

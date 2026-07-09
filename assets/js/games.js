@@ -6,7 +6,7 @@ window.CS_GAMES = [
   { slug: 'robot-runner',  icon: '🤖', title: 'Robot Runner',   desc: 'Stack commands to walk the robot to the goal.',          tag: 'Algorithms',    glow: '#f59e0b' },
   { slug: 'type-rush',     icon: '⌨️', title: 'Type Rush',      desc: 'Type the falling words before they hit the ground.',     tag: 'Typing Skills', glow: '#22d3ee' },
   { slug: 'memory-matrix', icon: '🧠', title: 'Memory Matrix',  desc: 'Flip cards and match the tech-term pairs.',              tag: 'Memory',        glow: '#a855f7' },
-  { slug: 'hex-hunter',    icon: '🎨', title: 'Hex Hunter',     desc: 'Guess which colour a hex / RGB code makes.',             tag: 'Colour Codes',  glow: '#f43f5e' },
+  { slug: 'power-2048',    icon: '2️⃣', title: '2048',           desc: 'Slide & merge tiles — the powers of two (2,4,8,16…).',   tag: 'Powers of Two', glow: '#f2b179' },
   { slug: 'sort-it-out',   icon: '📊', title: 'Sort It Out',    desc: 'Drag the bars into order — think like a sorter.',        tag: 'Sorting',       glow: '#34d399' },
   { slug: 'cs-quiz',       icon: '❓', title: 'CS Quiz Quest',  desc: 'Beat the clock on computer-basics trivia.',              tag: 'Quiz',          glow: '#fbbf24' },
   { slug: 'cipher-crack',  icon: '🔐', title: 'Cipher Crack',   desc: 'Shift the wheel to decode the secret message.',          tag: 'Encryption',    glow: '#60a5fa' },

@@ -383,7 +383,7 @@
       totalScore += gained;
 
       var last = level === LEVELS.length - 1;
-      var newBest = Arcade.best(SLUG, totalScore); // saves device-best + feeds leaderboard
+      var newBest = Arcade.best(SLUG, totalScore, level + 1); // device-best + fair level progress
       setText('best', Arcade.best(SLUG));
 
       SFX.play('win');

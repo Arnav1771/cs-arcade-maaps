@@ -367,7 +367,7 @@
     S.running=false; clearAllTimers();
     S.cells.forEach(hide);
     SFX.play('lose');
-    var newBest=Arcade.best(SLUG, S.score);   // record ONCE at game over
+    var newBest=Arcade.best(SLUG, S.score, S.level);   // record ONCE at game over (+ fair progress)
     elBest.textContent=Arcade.best(SLUG);
     endTitle.textContent='🐛 Bugs Won This Round';
     endMsg.innerHTML='You reached <b>Level '+S.level+'</b> and scored <b>'+S.score+'</b>.'+
@@ -379,7 +379,7 @@
     S.running=false; clearAllTimers();
     S.cells.forEach(hide);
     SFX.play('fanfare');
-    var newBest=Arcade.best(SLUG, S.score);
+    var newBest=Arcade.best(SLUG, S.score, S.level);
     elBest.textContent=Arcade.best(SLUG);
     if(Arcade.confetti) Arcade.confetti();
     endTitle.textContent='🏆 All Bugs Squashed!';

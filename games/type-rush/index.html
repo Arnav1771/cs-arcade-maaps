@@ -54,13 +54,79 @@
     position:absolute; white-space:nowrap; font-size:clamp(18px,3.4vw,30px); font-weight:700;
     padding:4px 12px; border-radius:9px; letter-spacing:1px;
     background:rgba(6,30,36,.85); border:1px solid rgba(34,211,238,.4);
-    color:#9fe9f5; text-shadow:0 0 6px rgba(34,211,238,.35);
+    color:#9fe9f5; text-shadow:0 0 6px rgba(34,211,238,.45);
+    box-shadow:0 0 10px rgba(34,211,238,.14), 0 0 22px rgba(34,211,238,.06);
     transform:translateX(-50%); transition:transform .05s;
   }
-  .word.active { border-color:var(--accent); box-shadow:0 0 18px rgba(34,211,238,.55); color:#eafcff; }
-  .word .hit { color:var(--accent); text-shadow:0 0 10px var(--accent); }
-  .word.pop { animation:pop .28s ease-out forwards; }
-  @keyframes pop { to { transform:translateX(-50%) scale(1.6); opacity:0; } }
+  /* soft neon trail streaking up behind each falling word */
+  .word::before {
+    content:""; position:absolute; left:50%; bottom:100%; transform:translateX(-50%);
+    width:70%; height:26px; pointer-events:none; border-radius:50%;
+    background:radial-gradient(ellipse at 50% 100%, rgba(34,211,238,.32), transparent 72%);
+    opacity:.7;
+  }
+  .word.active {
+    border-color:var(--accent); color:#eafcff;
+    animation:pulseTarget .8s ease-in-out infinite;
+  }
+  @keyframes pulseTarget {
+    0%,100% { box-shadow:0 0 14px rgba(34,211,238,.5), 0 0 4px rgba(34,211,238,.6) inset; }
+    50%     { box-shadow:0 0 30px rgba(34,211,238,.95), 0 0 10px rgba(34,211,238,.8) inset; }
+  }
+  .word .hit { color:#f2ffff; text-shadow:0 0 12px var(--accent), 0 0 22px var(--accent); }
+  .word.pop { animation:pop .3s ease-out forwards; z-index:2; }
+  @keyframes pop {
+    0%   { transform:translateX(-50%) scale(1); filter:brightness(1); }
+    35%  { transform:translateX(-50%) scale(1.35); filter:brightness(2.4); box-shadow:0 0 34px rgba(255,255,255,.9); background:rgba(200,255,255,.95); color:#022; }
+    100% { transform:translateX(-50%) scale(1.9); filter:brightness(2.4); opacity:0; }
+  }
+
+  /* floating +points */
+  .floatpts {
+    position:absolute; z-index:4; pointer-events:none; transform:translateX(-50%);
+    font-weight:800; font-size:20px; color:#eafcff;
+    text-shadow:0 0 10px var(--accent), 0 0 20px var(--accent);
+    animation:floatUp .9s ease-out forwards; white-space:nowrap;
+  }
+  .floatpts.big { font-size:28px; color:#fff2a8; text-shadow:0 0 12px #ffd24a, 0 0 26px #ff9e2c; }
+  @keyframes floatUp {
+    0%   { opacity:0; transform:translateX(-50%) translateY(6px) scale(.8); }
+    18%  { opacity:1; transform:translateX(-50%) translateY(-4px) scale(1.1); }
+    100% { opacity:0; transform:translateX(-50%) translateY(-52px) scale(1); }
+  }
+
+  /* particle canvas — above words, below overlays */
+  #fx { position:absolute; inset:0; z-index:3; pointer-events:none; }
+
+  /* red damage flash + screen shake on a miss */
+  #flash {
+    position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0; border-radius:14px;
+    background:radial-gradient(circle at 50% 60%, rgba(255,40,70,.0) 30%, rgba(255,40,70,.55) 100%);
+  }
+  #flash.hit { animation:dmgFlash .4s ease-out; }
+  @keyframes dmgFlash { 0% { opacity:0; } 15% { opacity:1; } 100% { opacity:0; } }
+  #field.shake { animation:shake .4s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shake {
+    10%,90% { transform:translateX(-2px); }
+    20%,80% { transform:translateX(4px); }
+    30%,50%,70% { transform:translateX(-7px); }
+    40%,60% { transform:translateX(7px); }
+  }
+
+  /* combo / streak badge */
+  #combo {
+    position:absolute; z-index:4; left:50%; top:14px; transform:translateX(-50%) scale(.6);
+    pointer-events:none; opacity:0; text-align:center; font-weight:800; letter-spacing:2px;
+    color:#fff; text-shadow:0 0 12px var(--accent), 0 0 26px var(--accent);
+  }
+  #combo.show { animation:comboPop .5s ease-out; }
+  #combo .n { font-size:34px; display:block; line-height:1; }
+  #combo .t { font-size:12px; letter-spacing:4px; opacity:.9; }
+  @keyframes comboPop {
+    0%   { opacity:0; transform:translateX(-50%) scale(.5); }
+    30%  { opacity:1; transform:translateX(-50%) scale(1.25); }
+    100% { opacity:0; transform:translateX(-50%) scale(1); }
+  }
 
   /* typing bar */
   #typebar {
@@ -112,11 +178,15 @@
     <div class="stat"><div class="lbl">Score</div><div class="val" id="score">0</div></div>
     <div class="stat"><div class="lbl">Level</div><div class="val" id="level">1/20</div></div>
     <div class="stat" id="lives"><div class="lbl">Lives</div><div class="val" id="livesVal">♥♥♥</div></div>
+    <div class="stat"><div class="lbl">Streak</div><div class="val" id="streak">0</div></div>
     <div class="stat"><div class="lbl">WPM</div><div class="val" id="wpm">0</div></div>
     <div class="stat"><div class="lbl">Best</div><div class="val" id="best">0</div></div>
   </div>
 
   <div id="field">
+    <canvas id="fx"></canvas>
+    <div id="flash"></div>
+    <div id="combo"><span class="n">x2</span><span class="t">COMBO</span></div>
     <!-- START overlay -->
     <div class="overlay" id="startScreen">
       <div class="title">Type&nbsp;<span class="cy">Rush</span></div>
@@ -191,9 +261,107 @@
   var $best = document.getElementById('best');
   var $typed = document.getElementById('typed');
   var input = document.getElementById('hiddenInput');
+  var $streak = document.getElementById('streak');
   var startScreen = document.getElementById('startScreen');
   var overScreen = document.getElementById('overScreen');
   var winScreen = document.getElementById('winScreen');
+  var fx = document.getElementById('fx');
+  var fxCtx = fx.getContext('2d');
+  var flash = document.getElementById('flash');
+  var comboEl = document.getElementById('combo');
+
+  // ---- FX: particle burst + floating points (canvas + DOM) ---------------
+  var particles = [];
+  var MAX_PARTICLES = 380;
+  var floaters = [];          // live DOM +points nodes (for cleanup on reset)
+  var streak = 0, bestStreak = 0;
+
+  function sizeCanvas() {
+    // match backing store to CSS pixels for crisp dots
+    fx.width = field.clientWidth;
+    fx.height = field.clientHeight;
+  }
+  window.addEventListener('resize', sizeCanvas);
+
+  // combo intensity 1..~3 — drives particle count / size / glow
+  function comboPower() { return 1 + Math.min(streak, 24) / 12; }
+
+  function burst(px, py, color, wordLen) {
+    var power = comboPower();
+    var n = Math.min(Math.round((10 + wordLen * 1.6) * power), 46);
+    for (var i = 0; i < n; i++) {
+      if (particles.length >= MAX_PARTICLES) break;
+      var a = Math.random() * Math.PI * 2;
+      var sp = (40 + Math.random() * 170) * (0.6 + power * 0.25);
+      particles.push({
+        x: px, y: py,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 40,
+        life: 0, max: 0.45 + Math.random() * 0.55,
+        size: (1.6 + Math.random() * 2.4) * (0.8 + power * 0.2),
+        color: color
+      });
+    }
+  }
+
+  function stepParticles(dt) {
+    fxCtx.clearRect(0, 0, fx.width, fx.height);
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.life += dt;
+      if (p.life >= p.max) { particles.splice(i, 1); continue; }
+      p.vy += 260 * dt;               // gravity
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      var t = 1 - p.life / p.max;
+      fxCtx.globalAlpha = t;
+      fxCtx.fillStyle = p.color;
+      fxCtx.shadowColor = p.color;
+      fxCtx.shadowBlur = 8;
+      fxCtx.beginPath();
+      fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      fxCtx.fill();
+    }
+    fxCtx.globalAlpha = 1; fxCtx.shadowBlur = 0;
+  }
+
+  function floatPts(px, py, text, big) {
+    var f = document.createElement('div');
+    f.className = 'floatpts' + (big ? ' big' : '');
+    f.textContent = text;
+    f.style.left = px + 'px';
+    f.style.top = py + 'px';
+    field.appendChild(f);
+    floaters.push(f);
+    (function (node) {
+      setTimeout(function () {
+        node.remove();
+        var k = floaters.indexOf(node); if (k !== -1) floaters.splice(k, 1);
+      }, 900);
+    })(f);
+  }
+
+  function showCombo() {
+    if (streak < 2) return;
+    comboEl.querySelector('.n').textContent = 'x' + streak;
+    comboEl.classList.remove('show');
+    void comboEl.offsetWidth;           // restart the animation
+    comboEl.classList.add('show');
+  }
+
+  function damageShake() {
+    field.classList.remove('shake'); void field.offsetWidth; field.classList.add('shake');
+    flash.classList.remove('hit'); void flash.offsetWidth; flash.classList.add('hit');
+  }
+
+  function clearFx() {
+    particles.length = 0;
+    if (fx.width) fxCtx.clearRect(0, 0, fx.width, fx.height);
+    floaters.forEach(function (f) { f.remove(); });
+    floaters = [];
+    comboEl.classList.remove('show');
+    field.classList.remove('shake');
+    flash.classList.remove('hit');
+  }
 
   // ---- 20-level climb -----------------------------------------------------
   var MAX_LEVEL = 20;         // clearing level 20 = victory
@@ -287,9 +455,8 @@
     w.el.remove();
     lives--;
     $livesVal.textContent = lives > 0 ? '♥'.repeat(lives) : '—';
-    field.animate ? field.animate(
-      [{ boxShadow:'0 0 0 3px rgba(255,60,90,.7) inset' }, { boxShadow:'0 0 40px rgba(34,211,238,.06) inset' }],
-      { duration: 350 }) : 0;
+    streak = 0; $streak.textContent = '0';
+    damageShake();
     SFX.play('wrong'); SFX.play('error');
     if (lives <= 0) gameOver();
   }
@@ -304,9 +471,22 @@
     if (target && target.text === typed) {
       SFX.play('type'); SFX.play('coin');
       if (target.text.length >= 8) SFX.play('correct');
+      // effect coordinates (before the pop animation clears it)
+      var px = target.x / 100 * field.clientWidth;
+      var py = target.y + (target.el.offsetHeight / 2 || 16);
+      streak++;
+      if (streak > bestStreak) bestStreak = streak;
+      $streak.textContent = streak;
+      var color = streak >= 8 ? '#ffd24a' : streak >= 4 ? '#7cf7ff' : '#22d3ee';
+      var big = streak >= 5 || target.text.length >= 8;
+      burst(px, py, color, target.text.length);
+      if (streak >= 4) SFX.play('powerup');
+      showCombo();
       clearWord(target);
       var pts = target.text.length * 10 + level * 2;
+      if (streak >= 3) pts += streak;            // small combo bonus
       score += pts;
+      floatPts(px, py, '+' + pts, big);
       correctChars += target.text.length;
       cleared++;
       $score.textContent = score;
@@ -357,6 +537,8 @@
     if (wpm > bestWpm) bestWpm = wpm;
     $wpm.textContent = wpm;
 
+    stepParticles(dt);
+
     requestAnimationFrame(frame);
   }
 
@@ -365,9 +547,10 @@
     words.forEach(function (w) { w.el.remove(); });
     words = []; used = [];
     score = 0; lives = 3; level = 1; cleared = 0; won = false;
-    correctChars = 0; bestWpm = 0;
+    correctChars = 0; bestWpm = 0; streak = 0; bestStreak = 0;
+    clearFx();
     $score.textContent = '0'; $level.textContent = '1/' + MAX_LEVEL;
-    $livesVal.textContent = '♥♥♥'; $wpm.textContent = '0';
+    $livesVal.textContent = '♥♥♥'; $wpm.textContent = '0'; $streak.textContent = '0';
     input.value = ''; $typed.textContent = '';
   }
 
@@ -376,6 +559,7 @@
     startScreen.classList.add('hidden');
     overScreen.classList.add('hidden');
     winScreen.classList.add('hidden');
+    sizeCanvas();
     running = true;
     startTime = performance.now();
     lastFrame = startTime;
@@ -388,7 +572,7 @@
   function gameOver() {
     running = false;
     SFX.play('lose');
-    var isBest = Arcade.best(SLUG, score);
+    var isBest = Arcade.best(SLUG, score, Math.min(level, MAX_LEVEL));
     var bestNow = Arcade.best(SLUG);
     $best.textContent = bestNow;
     document.getElementById('finalScore').textContent = score;
@@ -407,7 +591,7 @@
     // clear any words still falling
     words.forEach(function (w) { w.el.remove(); });
     words = []; used = [];
-    var isBest = Arcade.best(SLUG, score);
+    var isBest = Arcade.best(SLUG, score, MAX_LEVEL);
     var bestNow = Arcade.best(SLUG);
     $best.textContent = bestNow;
     document.getElementById('winScore').textContent = score;

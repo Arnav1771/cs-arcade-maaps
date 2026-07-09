@@ -478,13 +478,14 @@
     SFX.play('powerup'); setTimeout(function(){ SFX.play('win'); },130);
     if(level>=20){ endGame(true); return; }
     level++; solved=0;
+    Arcade.report(SLUG, level, 20);   // fair partial-progress capture
     SFX.play('whoosh');
     loadPuzzle();
   }
 
   function endGame(won){
     stopTimer();
-    Arcade.best(SLUG, score);          // save device-best + feed leaderboard (once)
+    Arcade.best(SLUG, score, level);   // save device-best + fair level progress
     var best=Arcade.best(SLUG);
     $('best').textContent=best;
     if(won){

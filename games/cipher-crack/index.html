@@ -404,6 +404,7 @@
 
     setTimeout(function () {
       idx++;
+      Arcade.report(SLUG, idx, 20);   // fair partial-progress capture
       if (idx >= TOTAL) { winGame(); }
       else { SFX.play('whoosh'); loadLevel(); }
     }, 850);
@@ -412,7 +413,7 @@
   function winGame() {
     SFX.play('win');
     setTimeout(function () { SFX.play('fanfare'); }, 350);
-    var isNew = Arcade.best(SLUG, score);
+    var isNew = Arcade.best(SLUG, score, 20);
     $('finalScore').textContent = score;
     $('finalBest').textContent = Arcade.best(SLUG);
     show(winScreen);

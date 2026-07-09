@@ -437,7 +437,7 @@
     function finish() {
       clearInterval(timerId);
       var g = gradeFor(correctCount);
-      var isNewBest = Arcade.best(SLUG, score); // saves if higher
+      var isNewBest = Arcade.best(SLUG, score, correctCount); // saves if higher (+ fair: correct/20)
       var best = Arcade.best(SLUG);
 
       $('gradeEmoji').textContent = g.emoji;

@@ -348,7 +348,7 @@
       SFX.play('wrong');
       setTimeout(function () { SFX.play('lose'); }, 180);
       finalRound.textContent = reached;
-      var isBest = Arcade.best(SLUG, reached);
+      var isBest = Arcade.best(SLUG, reached, reached);
       bestStat.textContent = Arcade.best(SLUG);
       if (isBest && reached > 0) {
         newBest.textContent = '🏆 New Best!';
@@ -371,7 +371,7 @@
       Arcade.confetti();
       showFlash('Memory Master!');
       winLevel.textContent = reached;
-      var isBest = Arcade.best(SLUG, reached);
+      var isBest = Arcade.best(SLUG, reached, reached);
       bestStat.textContent = Arcade.best(SLUG);
       winBest.textContent = (isBest ? '🏆 New Best!' : '');
       setTimeout(function () { winOver.classList.add('show'); }, 700);

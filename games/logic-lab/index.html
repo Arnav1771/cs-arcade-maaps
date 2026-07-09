@@ -24,6 +24,18 @@
     content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background-image:radial-gradient(rgba(163,230,53,.10) 1.4px, transparent 1.5px);
     background-size:26px 26px; opacity:.5;
+    animation:griddrift 14s linear infinite;
+  }
+  @keyframes griddrift{ from{ background-position:0 0; } to{ background-position:26px 26px; } }
+  /* soft energy sweep across the lab */
+  body::after{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:linear-gradient(115deg, transparent 40%, rgba(163,230,53,.05) 50%, transparent 60%);
+    background-size:250% 250%; animation:sweep 9s ease-in-out infinite;
+  }
+  @keyframes sweep{ 0%{ background-position:0% 0%; } 100%{ background-position:100% 100%; } }
+  @media (prefers-reduced-motion: reduce){
+    body::before,body::after{ animation:none; }
   }
   .wrap{ width:100%; max-width:760px; }
   h1{ display:none; }
@@ -55,25 +67,48 @@
   /* circuit styles */
   .wire{ stroke:#2c3d1e; stroke-width:5; fill:none; stroke-linecap:round; transition:stroke .18s; }
   .wire.on{ stroke:var(--lime); filter:url(#glow); }
+  /* travelling current — moving dashes of light along live wires */
+  .flow{
+    stroke:var(--lime-soft); stroke-width:3.4; fill:none; stroke-linecap:round;
+    stroke-dasharray:5 15; filter:url(#glow); opacity:.95;
+    animation:flow .55s linear infinite;
+  }
+  @keyframes flow{ to{ stroke-dashoffset:-40; } }
   .pin{ fill:#3a4a2a; transition:fill .18s; }
-  .pin.on{ fill:var(--lime); }
+  .pin.on{ fill:var(--lime); filter:url(#glow); }
+  .pin.on{ animation:pinpulse 1.4s ease-in-out infinite; }
+  @keyframes pinpulse{ 0%,100%{ r:4; } 50%{ r:5.2; } }
   .gbody{ fill:rgba(16,28,10,.96); stroke:var(--lime); stroke-width:2.5; }
   .gline{ fill:none; stroke:var(--lime); stroke-width:2.5; }
   .glabel{ fill:var(--lime); font-weight:800; text-anchor:middle; }
+  .gate{ transform-box:fill-box; transform-origin:center; }
+  .gate.pulse{ animation:gpulse .4s ease; }
+  @keyframes gpulse{ 0%{ transform:scale(1); } 45%{ transform:scale(1.13); } 100%{ transform:scale(1); } }
   .switch{ cursor:pointer; }
   .track{ fill:#1c2814; stroke:#4a5a30; stroke-width:2; transition:.18s; }
   .switch.on .track{ fill:#38541a; stroke:var(--lime); }
-  .knob{ fill:#8a9a70; transition:.18s; }
+  .knob{ fill:#8a9a70; transition:.18s; transform-box:fill-box; transform-origin:center; }
   .switch.on .knob{ fill:var(--lime); filter:url(#glow); }
+  .switch.flip .knob{ animation:knobpop .24s ease; }
+  @keyframes knobpop{ 0%{ transform:scale(1); } 40%{ transform:scale(1.4); } 100%{ transform:scale(1); } }
   .swlabel{ fill:#cfe6ac; font-weight:800; text-anchor:middle; }
   .swval{ fill:#0a1408; font-weight:800; text-anchor:middle; font-size:14px; }
   .glass{ fill:#141d0c; stroke:#4a5a30; stroke-width:2.5; transition:.2s; }
-  .bulb.lit .glass{ fill:var(--lime); stroke:var(--lime-soft); filter:url(#glow); }
+  .bulb.lit .glass{ fill:var(--lime); stroke:var(--lime-soft); filter:url(#glow); animation:bulbpulse 1.5s ease-in-out infinite; }
+  @keyframes bulbpulse{ 0%,100%{ opacity:1; } 50%{ opacity:.8; } }
   .bulbbase{ fill:#3a4a2a; }
   .bulbtxt{ text-anchor:middle; font-weight:800; font-size:16px; fill:#9fbf78; }
   .bulb.lit .bulbtxt{ fill:#0a1408; }
-  .ray{ stroke:var(--lime); stroke-width:3; stroke-linecap:round; opacity:0; }
-  .bulb.lit .ray{ opacity:.8; }
+  .ray{ stroke:var(--lime); stroke-width:3; stroke-linecap:round; opacity:0; transition:opacity .2s; }
+  .bulb.lit .ray{ opacity:.85; animation:rayflick 1.5s ease-in-out infinite; }
+  @keyframes rayflick{ 0%,100%{ opacity:.85; } 50%{ opacity:.45; } }
+  /* one-shot "power on" burst when a level is solved */
+  .powerflash{ fill:none; stroke:var(--lime-soft); stroke-width:5; opacity:0; }
+  .bulb.flash .powerflash{ animation:burst .7s ease-out; }
+  @keyframes burst{ 0%{ r:8; opacity:.95; stroke-width:6; } 100%{ r:52; opacity:0; stroke-width:1; } }
+  @media (prefers-reduced-motion: reduce){
+    .flow,.pin.on,.gate.pulse,.switch.flip .knob,.bulb.lit .glass,.bulb.lit .ray,.bulb.flash .powerflash{ animation:none; }
+  }
 
   /* truth table */
   .tt{ margin-top:14px; }
@@ -196,6 +231,7 @@
   ];
 
   var idx=0, score=0, st={A:0,B:0,C:0}, solved=false;
+  var solvedCount=0, gatePulse=false, lastToggled=null;
   var $=function(id){ return document.getElementById(id); };
   $('best').textContent = Arcade.best(SLUG);
 
@@ -229,9 +265,9 @@
     // OR family
     return { in:[{x:gx+6,y:gy+16},{x:gx+6,y:gy+34}], out:{x:gx+(type==='NOR'?63:54),y:gy+25} };
   }
-  function gateBody(type,gx,gy){
+  function gateBody(type,gx,gy,pulse){
     var lbl='<text class="glabel" font-size="'+(type.length>3?11:13)+'" x="'+(gx+24)+'" y="'+(gy+30)+'">'+type+'</text>';
-    var s='<g>';
+    var s='<g class="gate'+(pulse?' pulse':'')+'">';
     if(type==='AND'||type==='NAND'){
       s+='<path class="gbody" d="M'+(gx+4)+','+(gy+4)+' H'+(gx+30)+' a21,21 0 0 1 0,42 H'+(gx+4)+' Z"/>';
       if(type==='NAND') s+='<circle class="gbody" cx="'+(gx+56)+'" cy="'+(gy+25)+'" r="5"/>';
@@ -249,23 +285,28 @@
 
   function wire(x1,y1,x2,y2,on){
     var mx=(x1+x2)/2;
-    return '<path class="wire'+(on?' on':'')+'" d="M'+x1+','+y1+' H'+mx+' V'+y2+' H'+x2+'"/>';
+    var d='M'+x1+','+y1+' H'+mx+' V'+y2+' H'+x2;
+    var s='<path class="wire'+(on?' on':'')+'" d="'+d+'"/>';
+    if(on) s+='<path class="flow" d="'+d+'"/>';
+    return s;
   }
   function dot(x,y,on){ return '<circle class="pin'+(on?' on':'')+'" cx="'+x+'" cy="'+y+'" r="4"/>'; }
 
   function sw(id,cx,cy,on){
     var kx = on ? cx+15 : cx-15;
-    return '<g class="switch'+(on?' on':'')+'" data-in="'+id+'">'
+    var flip = (id===lastToggled) ? ' flip' : '';
+    return '<g class="switch'+(on?' on':'')+flip+'" data-in="'+id+'">'
       +'<text class="swlabel" font-size="15" x="'+cx+'" y="'+(cy-24)+'">'+id+'</text>'
       +'<rect class="track" x="'+(cx-30)+'" y="'+(cy-15)+'" width="60" height="30" rx="15"/>'
       +'<circle class="knob" cx="'+kx+'" cy="'+cy+'" r="13"/>'
       +'<text class="swval" x="'+kx+'" y="'+(cy+5)+'">'+(on?'1':'0')+'</text>'
       +'</g>';
   }
-  function bulb(cx,cy,on){
+  function bulb(cx,cy,on,flash){
     var rays='';
     for(var i=0;i<8;i++){ var a=i*Math.PI/4; rays+='<line class="ray" x1="'+(cx+Math.cos(a)*26)+'" y1="'+(cy+Math.sin(a)*26)+'" x2="'+(cx+Math.cos(a)*34)+'" y2="'+(cy+Math.sin(a)*34)+'"/>'; }
-    return '<g class="bulb'+(on?' lit':'')+'">'+rays
+    return '<g class="bulb'+(on?' lit':'')+(flash?' flash':'')+'">'+rays
+      +'<circle class="powerflash" cx="'+cx+'" cy="'+cy+'" r="8"/>'
       +'<rect class="bulbbase" x="'+(cx-9)+'" y="'+(cy+19)+'" width="18" height="11" rx="2"/>'
       +'<circle class="glass" cx="'+cx+'" cy="'+cy+'" r="22"/>'
       +'<text class="bulbtxt" x="'+cx+'" y="'+(cy+6)+'">'+(on?'1':'0')+'</text></g>';
@@ -279,23 +320,24 @@
       +'<feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
     var svg=defs, vb;
 
+    var pz=gatePulse, fl=(solved && r.out===L.goal);
     if(L.layout==='single1'){
       vb='0 0 440 200';
       var t=L.stages[0].type, gx=210,gy=75, p=pins(t,gx,gy), bx=390;
       svg+=wire(85,100,p.in[0].x,p.in[0].y,st.A);
       svg+=wire(p.out.x,p.out.y,bx-24,100,r.out);
-      svg+=gateBody(t,gx,gy);
+      svg+=gateBody(t,gx,gy,pz);
       svg+=dot(85,100,st.A)+dot(p.in[0].x,p.in[0].y,st.A)+dot(p.out.x,p.out.y,r.out);
-      svg+=sw('A',55,100,st.A)+bulb(bx,100,r.out);
+      svg+=sw('A',55,100,st.A)+bulb(bx,100,r.out,fl);
     } else if(L.layout==='single2'){
       vb='0 0 440 200';
       var t2=L.stages[0].type, g2x=200,g2y=75, q=pins(t2,g2x,g2y), bx2=390;
       svg+=wire(85,60,q.in[0].x,q.in[0].y,st.A);
       svg+=wire(85,140,q.in[1].x,q.in[1].y,st.B);
       svg+=wire(q.out.x,q.out.y,bx2-24,100,r.out);
-      svg+=gateBody(t2,g2x,g2y);
+      svg+=gateBody(t2,g2x,g2y,pz);
       svg+=dot(85,60,st.A)+dot(85,140,st.B)+dot(q.in[0].x,q.in[0].y,st.A)+dot(q.in[1].x,q.in[1].y,st.B)+dot(q.out.x,q.out.y,r.out);
-      svg+=sw('A',55,60,st.A)+sw('B',55,140,st.B)+bulb(bx2,100,r.out);
+      svg+=sw('A',55,60,st.A)+sw('B',55,140,st.B)+bulb(bx2,100,r.out,fl);
     } else { // double
       vb='0 0 580 200';
       var ta=L.stages[0].type, tb=L.stages[1].type;
@@ -305,9 +347,9 @@
       svg+=wire(85,140,pa.in[1].x,pa.in[1].y,st.B);
       svg+=wire(pa.out.x,pa.out.y,pb.in[0].x,pb.in[0].y,r.g[0]);
       svg+=wire(pb.out.x,pb.out.y,bx3-24,100,r.out);
-      svg+=gateBody(ta,ax,ay)+gateBody(tb,nx,ny);
+      svg+=gateBody(ta,ax,ay,pz)+gateBody(tb,nx,ny,pz);
       svg+=dot(85,60,st.A)+dot(85,140,st.B)+dot(pa.out.x,pa.out.y,r.g[0])+dot(pb.out.x,pb.out.y,r.out);
-      svg+=sw('A',55,60,st.A)+sw('B',55,140,st.B)+bulb(bx3,100,r.out);
+      svg+=sw('A',55,60,st.A)+sw('B',55,140,st.B)+bulb(bx3,100,r.out,fl);
     }
 
     var stage=$('stage');
@@ -318,6 +360,8 @@
       g.addEventListener('click', function(){ toggle(g.getAttribute('data-in')); });
     });
     renderTT();
+    // consume one-shot animation flags so they don't retrigger on the next render
+    gatePulse=false; lastToggled=null;
   }
 
   // ---- live truth table ----
@@ -343,18 +387,23 @@
   // ---- interactions ----
   function toggle(id){
     if(solved) return;
+    var oldOut=evalLevel(LEVELS[idx],st.A,st.B).out;
     st[id]=st[id]?0:1;
+    lastToggled=id;
+    var out=evalLevel(LEVELS[idx],st.A,st.B).out;
+    gatePulse=(out!==oldOut);
     SFX.play('flip');
     render();
-    var out=evalLevel(LEVELS[idx],st.A,st.B).out;
     if(out===LEVELS[idx].goal) win();
     else SFX.play('tick');
   }
 
   function win(){
     solved=true;
+    solvedCount++;
     score+=100;
     $('score').textContent=score;
+    render(); // re-render with solved=true to fire the "power on" burst
     SFX.play('powerup'); setTimeout(function(){ SFX.play('correct'); },120);
     $('msg').textContent='✅ Solved! +100';
     $('msg').className='msg good';
@@ -383,11 +432,12 @@
     SFX.play('click');
     if(idx>=LEVELS.length-1){ finish(); return; }
     SFX.play('whoosh');
+    Arcade.report(SLUG, idx + 1, 20);   // fair partial-progress capture
     loadLevel(idx+1);
   }
 
   function finish(){
-    var isBest=Arcade.best(SLUG, score);
+    var isBest=Arcade.best(SLUG, score, solvedCount);
     $('finalScore').textContent=score;
     $('finalBest').textContent=Arcade.best(SLUG);
     $('winOv').classList.remove('hidden');
@@ -397,7 +447,7 @@
 
   function startGame(){
     SFX.play('start');
-    score=0; $('score').textContent=0;
+    score=0; solvedCount=0; $('score').textContent=0;
     $('startOv').classList.add('hidden');
     $('winOv').classList.add('hidden');
     loadLevel(0);

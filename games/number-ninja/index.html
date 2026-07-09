@@ -398,7 +398,7 @@
   // ---------- game over ----------
   function gameOver(won) {
     clearTimer();
-    Arcade.best(SLUG, state.score);            // save best + feed leaderboard, once
+    Arcade.best(SLUG, state.score, state.level);   // raw best + fair level progress (0..20)
     $('finalScore').textContent = state.score;
     $('rLevel').textContent = state.level;
     $('rCorrect').textContent = state.correctTotal;

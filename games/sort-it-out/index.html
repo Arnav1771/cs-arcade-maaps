@@ -429,7 +429,7 @@
       totalScore += gained;
       setText('score', totalScore);
 
-      var newBest = Arcade.best(SLUG, totalScore);
+      var newBest = Arcade.best(SLUG, totalScore, level + 1);
       setText('best', Arcade.best(SLUG));
 
       SFX.play('win');
@@ -464,6 +464,7 @@
         level = 0;
       } else {
         level++;
+        Arcade.report(SLUG, level, 20);   // fair partial-progress capture
       }
       startLevel(true);
     }
