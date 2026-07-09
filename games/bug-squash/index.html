@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bug Squash</title>
+<style>
+  :root{
+    --accent:#ef4444; --accent2:#f87171; --good:#22c55e; --good2:#4ade80;
+    --ink:#e8f7ee; --muted:#8fb7a1;
+    --pcb0:#041109; --pcb1:#0a2416; --panel:rgba(9,32,20,.74);
+    --line:rgba(239,68,68,.28); --copper:#0f7a44;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink); min-height:100vh; padding:64px 12px 26px;
+    background:
+      radial-gradient(1100px 640px at 82% -8%, rgba(239,68,68,.14), transparent 60%),
+      radial-gradient(860px 560px at 0% 112%, rgba(34,197,94,.12), transparent 55%),
+      linear-gradient(160deg,var(--pcb0),var(--pcb1));
+    background-attachment:fixed; -webkit-tap-highlight-color:transparent;
+  }
+  /* circuit-board trace grid */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.55;
+    background-image:
+      linear-gradient(rgba(34,197,94,.07) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(34,197,94,.07) 1px,transparent 1px);
+    background-size:32px 32px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  header{text-align:center;margin:2px 0 12px}
+  h1{
+    margin:0;font-size:clamp(26px,6.4vw,42px);font-weight:900;letter-spacing:.5px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .concept{margin:5px auto 0;max-width:540px;font-size:13.5px;color:var(--muted);line-height:1.5}
+  .concept b{color:var(--accent2)}
+  /* HUD */
+  .hud{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+  .pill{font-weight:800;font-size:13px;background:rgba(239,68,68,.12);color:var(--accent2);
+    border:1px solid var(--line);border-radius:999px;padding:6px 12px;white-space:nowrap}
+  .pill b{color:#fff}
+  .pill.good{background:rgba(34,197,94,.12);color:var(--good2);border-color:rgba(34,197,94,.3)}
+  #combo{transition:transform .12s}
+  #combo.bump{transform:scale(1.18)}
+  /* progress bar */
+  .barwrap{max-width:520px;margin:0 auto 10px;height:12px;border-radius:999px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden}
+  #bar{height:100%;width:0;border-radius:999px;
+    background:linear-gradient(90deg,var(--good),var(--good2));transition:width .18s}
+  #bar.time{background:linear-gradient(90deg,var(--accent),#fb923c)}
+  /* board */
+  .boardwrap{position:relative;max-width:520px;margin:0 auto}
+  .board{display:grid;gap:12px;padding:14px;border-radius:20px;
+    background:var(--panel);border:1px solid var(--line);
+    box-shadow:0 16px 34px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+  .node{position:relative;aspect-ratio:1/1;border-radius:50%;cursor:pointer;
+    background:radial-gradient(circle at 50% 42%,#0d3320,#03130b 72%);
+    box-shadow:inset 0 0 0 3px rgba(34,197,94,.28), inset 0 6px 16px rgba(0,0,0,.6);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    transition:box-shadow .1s}
+  .node::after{content:"";position:absolute;inset:26% ;border-radius:50%;
+    box-shadow:inset 0 0 0 2px rgba(255,255,255,.05)}
+  .node:active{box-shadow:inset 0 0 0 3px var(--accent), inset 0 6px 16px rgba(0,0,0,.6)}
+  .critter{font-size:clamp(30px,10vw,52px);line-height:1;transform:scale(0);
+    transition:transform .12s cubic-bezier(.34,1.56,.64,1);
+    filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));user-select:none;pointer-events:none}
+  .critter.up{transform:scale(1)}
+  .node.hit{animation:flash .25s}
+  @keyframes flash{0%{box-shadow:inset 0 0 0 4px var(--accent)}100%{box-shadow:inset 0 0 0 3px rgba(34,197,94,.28)}}
+  /* floating score popups */
+  .pop{position:absolute;font-weight:900;font-size:15px;pointer-events:none;
+    transform:translate(-50%,-50%);animation:rise .7s ease-out forwards;z-index:5}
+  @keyframes rise{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}
+    20%{opacity:1}100%{opacity:0;transform:translate(-50%,-160%) scale(1.1)}}
+  /* buttons */
+  .btn{cursor:pointer;font-weight:800;font-size:15px;color:#fff;border:none;
+    border-radius:999px;padding:12px 26px;
+    background:linear-gradient(90deg,var(--accent),#dc2626);
+    box-shadow:0 8px 20px rgba(239,68,68,.35);transition:transform .1s}
+  .btn:active{transform:translateY(2px)}
+  .btn.alt{background:linear-gradient(90deg,#0f7a44,#16a34a);box-shadow:0 8px 20px rgba(22,163,74,.3)}
+  /* overlay */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;text-align:center;padding:22px;
+    background:rgba(4,17,9,.86);border-radius:20px;z-index:20;backdrop-filter:blur(3px)}
+  .overlay h2{margin:0;font-size:clamp(22px,5.5vw,32px)}
+  .overlay p{margin:0;max-width:400px;font-size:14px;color:var(--ink);line-height:1.55}
+  .how{font-size:13px;color:var(--muted);max-width:400px;line-height:1.55}
+  .how b{color:var(--good2)}
+  .hidden{display:none!important}
+  /* level banner */
+  .banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:clamp(24px,6vw,38px);font-weight:900;color:#fff;text-align:center;
+    text-shadow:0 4px 18px rgba(0,0,0,.7);z-index:15;pointer-events:none;
+    animation:pulse .5s ease-out}
+  @keyframes pulse{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  .foot{text-align:center;margin-top:14px;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🐛 Bug Squash</h1>
+    <p class="concept"><b>Debugging</b> means finding and fixing the mistakes ("bugs") in a
+      program. Squash the bugs before they spread — but don't smash the good chips ✅!</p>
+  </header>
+
+  <div class="hud">
+    <span class="pill">Level <b id="lvl">1</b>/20</span>
+    <span class="pill">Score <b id="score">0</b></span>
+    <span class="pill" id="lives">❤️❤️❤️</span>
+    <span class="pill" id="combo">Combo ×1</span>
+    <span class="pill good">Best <b id="best">0</b></span>
+  </div>
+
+  <div class="barwrap"><div id="bar"></div></div>
+
+  <div class="boardwrap">
+    <div class="board" id="board"></div>
+
+    <!-- START -->
+    <div class="overlay" id="ovStart">
+      <h2>Bug Squash</h2>
+      <p class="how"><b>Tap the bugs</b> 🐛 to squash them and score points.<br>
+        <b>Don't tap the green chips</b> ✅ — those are working code!<br>
+        Miss too many bugs or smash a chip and you lose a ❤️. Clear all <b>20 levels</b> to win.</p>
+      <button class="btn" id="startBtn">▶ Start Debugging</button>
+    </div>
+
+    <!-- GAME OVER / WIN -->
+    <div class="overlay hidden" id="ovEnd">
+      <h2 id="endTitle">Game Over</h2>
+      <p id="endMsg"></p>
+      <button class="btn alt" id="againBtn">↻ Play Again</button>
+    </div>
+  </div>
+
+  <p class="foot">Squash 🐛 · dodge ✅ · 3 lives · 20 levels of debugging</p>
+</div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function(){
+  'use strict';
+  var SLUG='bug-squash';
+  Arcade.mount({ title:'Bug Squash', accent:'#ef4444' });
+
+  // ---- element refs ----
+  var board=document.getElementById('board');
+  var elLvl=document.getElementById('lvl'), elScore=document.getElementById('score');
+  var elLives=document.getElementById('lives'), elBest=document.getElementById('best');
+  var elCombo=document.getElementById('combo'), elBar=document.getElementById('bar');
+  var ovStart=document.getElementById('ovStart'), ovEnd=document.getElementById('ovEnd');
+  var endTitle=document.getElementById('endTitle'), endMsg=document.getElementById('endMsg');
+  var boardwrap=document.querySelector('.boardwrap');
+
+  var BUGS=['🐛','🐞','🪲','🦟'];
+  var CHIPS=['✅','💾','🔧'];
+
+  // ---- game state ----
+  var S={ level:1, score:0, lives:3, combo:0, squashed:0, misses:0,
+          timeLeft:0, target:0, running:false, gen:0, cells:[] };
+  var spawnTimer=null, tickTimer=null;
+
+  elBest.textContent = Arcade.best(SLUG);
+
+  // ---- per-level difficulty (gentle early, steep late) ----
+  function params(L){
+    var cols = L<=6 ? 3 : (L<=13 ? 4 : 4);
+    var rows = L<=6 ? 3 : (L<=13 ? 3 : 4);
+    return {
+      cols:cols, rows:rows,
+      target: 5 + L,                                   // bugs to squash: 6 -> 25
+      time: 26,                                         // seconds per level
+      interval: Math.max(400, 1080 - L*34),             // ms between spawns
+      visible: Math.max(680, 1520 - L*42),              // ms a critter stays up
+      maxActive: 1 + Math.floor((L-1)/5),               // 1 -> 4 at once
+      decoy: L<=2 ? 0 : Math.min(0.4, 0.08 + (L-2)*0.02)// chance a pop is a good chip
+    };
+  }
+
+  // ---- timer hygiene: clear everything ----
+  function clearAllTimers(){
+    if(spawnTimer){ clearTimeout(spawnTimer); spawnTimer=null; }
+    if(tickTimer){ clearInterval(tickTimer); tickTimer=null; }
+    S.cells.forEach(function(c){ if(c.timer){ clearTimeout(c.timer); c.timer=null; } });
+  }
+
+  function buildBoard(p){
+    board.innerHTML='';
+    board.style.gridTemplateColumns='repeat('+p.cols+',1fr)';
+    S.cells=[];
+    var n=p.cols*p.rows;
+    for(var i=0;i<n;i++){
+      var node=document.createElement('div'); node.className='node';
+      var crit=document.createElement('span'); crit.className='critter';
+      node.appendChild(crit);
+      (function(idx){ node.addEventListener('pointerdown',function(){ tap(idx); }); })(i);
+      board.appendChild(node);
+      S.cells.push({ node:node, crit:crit, type:null, timer:null });
+    }
+  }
+
+  // ---- HUD paint ----
+  function paint(){
+    elLvl.textContent=S.level;
+    elScore.textContent=S.score;
+    elLives.textContent = S.lives>0 ? '❤️'.repeat(S.lives) : '💔';
+    elCombo.textContent='Combo ×'+Math.max(1,S.combo);
+  }
+  function bumpCombo(){ elCombo.classList.add('bump'); setTimeout(function(){ elCombo.classList.remove('bump'); },120); }
+
+  // ---- spawning ----
+  function spawnLoop(g){
+    if(g!==S.gen||!S.running) return;
+    var p=params(S.level);
+    var empties=[], active=0;
+    S.cells.forEach(function(c,i){ if(c.type) active++; else empties.push(i); });
+    if(active<p.maxActive && empties.length){
+      var idx=empties[(Math.random()*empties.length)|0];
+      var isDecoy = Math.random()<p.decoy;
+      spawn(idx, isDecoy, p.visible, g);
+    }
+    var jitter = p.interval*(0.7+Math.random()*0.6);
+    spawnTimer=setTimeout(function(){ spawnLoop(g); }, jitter);
+  }
+
+  function spawn(idx, isDecoy, visible, g){
+    var c=S.cells[idx];
+    c.type = isDecoy ? 'chip' : 'bug';
+    c.crit.textContent = isDecoy ? CHIPS[(Math.random()*CHIPS.length)|0]
+                                 : BUGS[(Math.random()*BUGS.length)|0];
+    // pop up
+    requestAnimationFrame(function(){ c.crit.classList.add('up'); });
+    if(!isDecoy) SFX.play('blip');
+    c.timer=setTimeout(function(){
+      if(g!==S.gen) return;
+      var wasBug = c.type==='bug';
+      hide(c);
+      if(wasBug) miss();      // a bug escaped un-squashed
+    }, visible);
+  }
+
+  function hide(c){
+    if(c.timer){ clearTimeout(c.timer); c.timer=null; }
+    c.crit.classList.remove('up');
+    c.type=null;
+    var crit=c.crit;
+    setTimeout(function(){ if(!c.type) crit.textContent=''; },140);
+  }
+
+  // ---- interactions ----
+  function tap(idx){
+    if(!S.running) return;
+    var c=S.cells[idx];
+    if(c.type==='bug'){
+      hide(c);
+      S.combo++;
+      var pts = 10 + Math.min(S.combo-1,10)*2;   // combo bonus, capped
+      S.score += pts;
+      S.squashed++;
+      SFX.play(S.combo>=4 ? 'coin' : 'correct');
+      bumpCombo();
+      c.node.classList.add('hit'); setTimeout(function(){ c.node.classList.remove('hit'); },250);
+      popup(c.node,'+'+pts,'#4ade80');
+      paint(); updateBar();
+      if(S.squashed>=S.target) levelClear();
+    } else if(c.type==='chip'){
+      hide(c);
+      S.combo=0;
+      SFX.play('wrong');
+      popup(c.node,'✕ chip!','#f87171');
+      paint();
+      loseLife('chip');
+    } else {
+      SFX.play('tick');   // empty tap — harmless
+    }
+  }
+
+  function miss(){
+    if(!S.running) return;
+    S.combo=0; S.misses++;
+    if(S.misses>=3){ S.misses=0; loseLife('miss'); }
+    paint();
+  }
+
+  function loseLife(reason){
+    S.lives--; paint();
+    boardwrap.animate?boardwrap.animate([{filter:'none'},{filter:'brightness(1.8) hue-rotate(-20deg)'},{filter:'none'}],{duration:260}):0;
+    if(S.lives<=0){ gameOver(); }
+  }
+
+  // ---- floating score popup ----
+  function popup(node,text,color){
+    var r=node.getBoundingClientRect(), wr=boardwrap.getBoundingClientRect();
+    var p=document.createElement('div'); p.className='pop';
+    p.textContent=text; p.style.color=color;
+    p.style.left=(r.left-wr.left+r.width/2)+'px';
+    p.style.top=(r.top-wr.top+r.height/2)+'px';
+    boardwrap.appendChild(p);
+    setTimeout(function(){ p.remove(); },700);
+  }
+
+  // ---- progress bar (squash progress) ----
+  function updateBar(){
+    elBar.classList.remove('time');
+    elBar.style.width = Math.min(100,(S.squashed/S.target)*100)+'%';
+  }
+
+  // ---- level lifecycle ----
+  function startLevel(L){
+    clearAllTimers();
+    S.level=L; S.squashed=0; S.misses=0; S.combo=0;
+    var p=params(L);
+    S.target=p.target; S.timeLeft=p.time;
+    buildBoard(p);
+    paint(); updateBar();
+    S.running=false;
+    S.gen++;
+    var g=S.gen;
+    banner('Level '+L, function(){
+      if(g!==S.gen) return;
+      S.running=true;
+      spawnLoop(g);
+      tickTimer=setInterval(function(){ tickTime(g); },100);
+    });
+  }
+
+  function tickTime(g){
+    if(g!==S.gen||!S.running) return;
+    S.timeLeft-=0.1;
+    if(S.timeLeft<=0){ S.timeLeft=0; timeUp(); }
+  }
+
+  function timeUp(){
+    S.running=false; clearAllTimers();
+    SFX.play('lose');
+    S.lives--; paint();
+    if(S.lives<=0){ gameOver(); return; }
+    banner("Time's up! Retry", function(){ startLevel(S.level); });
+  }
+
+  function levelClear(){
+    S.running=false; clearAllTimers();
+    S.cells.forEach(hide);
+    var bonus=Math.round(S.timeLeft)*3;
+    S.score+=bonus; paint();
+    if(S.level>=20){ winGame(); return; }
+    SFX.play('win');
+    banner('Cleared! +'+bonus, function(){ startLevel(S.level+1); });
+  }
+
+  // ---- banners & overlays ----
+  function banner(text, done){
+    var b=document.createElement('div'); b.className='banner'; b.textContent=text;
+    boardwrap.appendChild(b);
+    setTimeout(function(){ b.remove(); if(done) done(); }, 1050);
+  }
+
+  function gameOver(){
+    S.running=false; clearAllTimers();
+    S.cells.forEach(hide);
+    SFX.play('lose');
+    var newBest=Arcade.best(SLUG, S.score);   // record ONCE at game over
+    elBest.textContent=Arcade.best(SLUG);
+    endTitle.textContent='🐛 Bugs Won This Round';
+    endMsg.innerHTML='You reached <b>Level '+S.level+'</b> and scored <b>'+S.score+'</b>.'+
+      (newBest?'<br>🎉 New best score!':'')+'<br>Every debugger misses a few — try again!';
+    ovEnd.classList.remove('hidden');
+  }
+
+  function winGame(){
+    S.running=false; clearAllTimers();
+    S.cells.forEach(hide);
+    SFX.play('fanfare');
+    var newBest=Arcade.best(SLUG, S.score);
+    elBest.textContent=Arcade.best(SLUG);
+    if(Arcade.confetti) Arcade.confetti();
+    endTitle.textContent='🏆 All Bugs Squashed!';
+    endMsg.innerHTML='You cleared all <b>20 levels</b> with <b>'+S.score+'</b> points — '+
+      'a master debugger!'+(newBest?'<br>🎉 New best score!':'');
+    ovEnd.classList.remove('hidden');
+  }
+
+  // ---- start / restart ----
+  function newGame(){
+    ovStart.classList.add('hidden');
+    ovEnd.classList.add('hidden');
+    S.score=0; S.lives=3;
+    startLevel(1);
+  }
+
+  document.getElementById('startBtn').addEventListener('click',function(){ SFX.play('start'); newGame(); });
+  document.getElementById('againBtn').addEventListener('click',function(){ SFX.play('start'); newGame(); });
+
+  // build an initial empty board behind the start overlay for looks
+  buildBoard(params(1));
+  paint();
+})();
+</script>
+</body>
+</html>

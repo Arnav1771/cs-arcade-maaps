@@ -21,7 +21,7 @@
       radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,0.22), transparent 55%),
       linear-gradient(160deg, #0a0714 0%, #14102b 55%, #0a0714 100%);
     min-height: 100vh;
-    padding: 64px 12px 16px;
+    padding: 64px 12px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -47,29 +47,30 @@
     gap: 8px;
     justify-content: center;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .stat {
     flex: 1 1 0;
-    min-width: 78px;
+    min-width: 72px;
     background: var(--glass);
     border: 1px solid rgba(168,85,247,0.35);
     border-radius: 14px;
-    padding: 8px 6px;
+    padding: 7px 6px;
     text-align: center;
     backdrop-filter: blur(8px);
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
   }
   .stat .k { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #b8a9f0; opacity: .85; }
-  .stat .v { font-size: 20px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+  .stat .v { font-size: 19px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
   .stat .v span { color: var(--accent); }
 
   /* ---- Board ---- */
   .board {
     display: grid;
-    gap: clamp(6px, 2vw, 12px);
+    gap: clamp(5px, 1.6vw, 11px);
     width: 100%;
     perspective: 1000px;
+    margin: 0 auto;
   }
   .card {
     position: relative;
@@ -105,7 +106,7 @@
     opacity: .5;
   }
   .back .logo {
-    font-size: clamp(18px, 6vw, 30px);
+    font-size: clamp(16px, 5vw, 28px);
     filter: drop-shadow(0 0 6px var(--accent));
     z-index: 1;
   }
@@ -115,14 +116,14 @@
     background: linear-gradient(160deg, rgba(168,85,247,0.22), rgba(99,102,241,0.12));
     border: 1px solid rgba(168,85,247,0.55);
     box-shadow: 0 6px 18px rgba(0,0,0,0.35), inset 0 0 22px rgba(168,85,247,0.18);
-    gap: 4px;
-    padding: 4px;
+    gap: 3px;
+    padding: 3px;
   }
-  .front .emoji { font-size: clamp(24px, 9vw, 44px); line-height: 1; }
+  .front .emoji { font-size: clamp(20px, 7vw, 40px); line-height: 1; }
   .front .label {
-    font-size: clamp(9px, 2.8vw, 13px);
+    font-size: clamp(8px, 2.4vw, 12px);
     font-weight: 700;
-    letter-spacing: .3px;
+    letter-spacing: .2px;
     color: #f2ecff;
     text-align: center;
   }
@@ -132,6 +133,19 @@
     animation: pop .4s ease;
   }
   @keyframes pop { 0%{transform:rotateY(180deg) scale(1);} 50%{transform:rotateY(180deg) scale(1.08);} 100%{transform:rotateY(180deg) scale(1);} }
+
+  /* ---- Toast ---- */
+  .toast {
+    position: fixed; top: 74px; left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    z-index: 600; padding: 10px 18px; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(168,85,247,0.95), rgba(99,102,241,0.9));
+    color: #fff; font-weight: 800; font-size: 14px; letter-spacing: .3px;
+    box-shadow: 0 10px 30px rgba(168,85,247,0.5);
+    opacity: 0; pointer-events: none; white-space: nowrap;
+    transition: opacity .25s, transform .25s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   /* ---- Overlay (start / win) ---- */
   .overlay {
@@ -166,19 +180,6 @@
   }
   .how b { color: var(--accent); }
 
-  .levels { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
-  .lvl {
-    flex: 1 1 0; min-width: 92px;
-    cursor: pointer;
-    background: rgba(99,102,241,0.12);
-    border: 1px solid rgba(168,85,247,0.35);
-    border-radius: 14px; padding: 10px 8px; color: #e9e6ff;
-    font-weight: 700; transition: .18s;
-  }
-  .lvl small { display: block; font-weight: 500; font-size: 10.5px; color: #b8a9f0; margin-top: 2px; }
-  .lvl.on, .lvl:active { background: var(--accent); color: #1a0b2e; border-color: #fff; }
-  .lvl.on small { color: #2a0f45; }
-
   .btn {
     display: inline-block; cursor: pointer;
     font-size: 16px; font-weight: 800; letter-spacing: .5px;
@@ -201,7 +202,7 @@
   .newbest { color: #fde047; font-weight: 800; font-size: 14px; margin-bottom: 10px; min-height: 18px; }
 
   .restart {
-    margin-top: 14px;
+    margin-top: 12px;
     cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: .5px;
     color: #e9e6ff; background: var(--glass);
     border: 1px solid rgba(168,85,247,0.4); border-radius: 999px; padding: 9px 18px;
@@ -213,48 +214,47 @@
 <body>
   <div class="wrap">
     <div class="hud">
-      <div class="stat"><div class="k">Moves</div><div class="v" id="moves">0</div></div>
+      <div class="stat"><div class="k">Level</div><div class="v" id="level">1<span>/20</span></div></div>
       <div class="stat"><div class="k">Pairs</div><div class="v" id="pairs">0<span>/0</span></div></div>
       <div class="stat"><div class="k">Time</div><div class="v" id="time">0:00</div></div>
-      <div class="stat"><div class="k">Best</div><div class="v" id="best">0</div></div>
+      <div class="stat"><div class="k">Score</div><div class="v" id="score">0</div></div>
     </div>
     <div class="board" id="board"></div>
     <button class="restart" id="restart">↺ Restart Level</button>
   </div>
 
+  <div class="toast" id="toast"></div>
+
   <!-- Start overlay -->
   <div class="overlay" id="startOverlay">
     <div class="panel">
       <h1>Memory Matrix</h1>
-      <div class="sub">Holographic tech-card memory challenge</div>
+      <div class="sub">Holographic tech-card memory climb · 20 levels</div>
       <div class="how">
         <b>Concept:</b> Just like a computer's <b>RAM</b> holds data so it can be recalled,
         your brain holds the card positions.<br>
-        Flip two cards. If the tech items <b>match</b>, they stay lit.
-        If not, they flip back — remember where they were! Match all pairs to win.
+        Cards flash face-up for a moment — <b>memorize</b> them! Then flip two cards.
+        Matching tech items stay lit; misses flip back.<br>
+        Clear all pairs to <b>climb a level</b>. Grids grow, the flash gets shorter,
+        and a <b>timer</b> kicks in later. Reach <b>Level 20</b> to master the Matrix!
       </div>
-      <div class="levels" id="levels">
-        <div class="lvl on" data-level="0">Easy<small>4 × 3 · 6 pairs</small></div>
-        <div class="lvl" data-level="1">Medium<small>4 × 4 · 8 pairs</small></div>
-        <div class="lvl" data-level="2">Hard<small>5 × 4 · 10 pairs</small></div>
-      </div>
-      <button class="btn" id="startBtn">▶ Start Game</button>
+      <button class="btn" id="startBtn">▶ Start Climb</button>
     </div>
   </div>
 
   <!-- Win overlay -->
   <div class="overlay hide" id="winOverlay">
     <div class="panel">
-      <h1>Matrix Cleared!</h1>
-      <div class="sub">Every chip recalled 🧠</div>
+      <h1>Matrix Mastered!</h1>
+      <div class="sub">All 20 levels recalled 🧠</div>
       <div class="newbest" id="newbest"></div>
       <div class="win-stats">
-        <div class="b"><div class="k">Moves</div><div class="v" id="wMoves">0</div></div>
-        <div class="b"><div class="k">Time</div><div class="v" id="wTime">0:00</div></div>
+        <div class="b"><div class="k">Levels</div><div class="v">20/20</div></div>
         <div class="b"><div class="k">Score</div><div class="v" id="wScore">0</div></div>
+        <div class="b"><div class="k">Best</div><div class="v" id="wBest">0</div></div>
       </div>
-      <button class="btn" id="againBtn">▶ Play Again</button>
-      <div style="margin-top:14px"><button class="restart" id="menuBtn">⤺ Change Level</button></div>
+      <button class="btn" id="againBtn">▶ Climb Again</button>
+      <div style="margin-top:14px"><button class="restart" id="menuBtn">⤺ Main Menu</button></div>
     </div>
   </div>
 
@@ -266,32 +266,45 @@
     var SLUG = 'memory-matrix';
     Arcade.mount({ title: 'Memory Matrix', accent: '#a855f7' });
 
-    // ---- tech items (emoji + label) ----
+    // ---- tech items (emoji + label) — 20 distinct faces, enough for 15 pairs ----
     var ITEMS = [
       ['💾','Storage'], ['🖥️','Monitor'], ['🖱️','Mouse'], ['⌨️','Keyboard'],
       ['🌐','Internet'], ['🔌','Power'], ['🧠','CPU'], ['📶','WiFi'],
-      ['🖨️','Printer'], ['🔋','Battery'], ['💿','Disk'], ['📷','Camera']
+      ['🖨️','Printer'], ['🔋','Battery'], ['💿','Disk'], ['📷','Camera'],
+      ['🤖','Robot'], ['📱','Phone'], ['💻','Laptop'], ['🎮','Console'],
+      ['🛰️','Satellite'], ['🔒','Security'], ['☁️','Cloud'], ['🧮','Compute']
     ];
 
-    // ---- levels: cols, rows, pairs ----
-    var LEVELS = [
-      { cols: 4, rows: 3, pairs: 6 },
-      { cols: 4, rows: 4, pairs: 8 },
-      { cols: 5, rows: 4, pairs: 10 }
-    ];
+    // ---- build 20 levels: grid grows to a 5×6 (15-pair) max, then difficulty
+    //      ramps via a shrinking preview flash and a shrinking countdown timer ----
+    var GRIDS = [
+      [2,2],[3,2],[4,2],[5,2],[3,4],[4,4],[5,4],[4,6],[5,6]
+    ]; // idx 0..8 grow; idx>=9 reuse last (5×6 = 15 pairs)
+    var LEVELS = [];
+    for (var i = 0; i < 20; i++) {
+      var g = GRIDS[i < GRIDS.length ? i : GRIDS.length - 1];
+      var cols = g[0], rows = g[1];
+      LEVELS.push({
+        cols: cols,
+        rows: rows,
+        pairs: (cols * rows) / 2,
+        flash: Math.max(700, 2600 - i * 110),   // ms preview, shrinks each level
+        secs:  i >= 9 ? Math.max(70, 160 - i * 6) : 0  // countdown on top levels; 0 = count-up
+      });
+    }
 
-    var boardEl = document.getElementById('board');
-    var movesEl = document.getElementById('moves');
-    var pairsEl = document.getElementById('pairs');
-    var timeEl  = document.getElementById('time');
-    var bestEl  = document.getElementById('best');
+    var boardEl  = document.getElementById('board');
+    var levelEl  = document.getElementById('level');
+    var pairsEl  = document.getElementById('pairs');
+    var timeEl   = document.getElementById('time');
+    var scoreEl  = document.getElementById('score');
+    var toastEl  = document.getElementById('toast');
 
     var level = 0;
-    var moves = 0, matched = 0, totalPairs = 0;
-    var first = null, second = null, busy = false, locked = true;
-    var startTime = 0, timer = null, elapsed = 0;
-
-    bestEl.textContent = Arcade.best(SLUG) || 0;
+    var moves = 0, matched = 0, totalPairs = 0, totalScore = 0;
+    var first = null, second = null, busy = false, locked = true, playing = false;
+    var startTime = 0, timer = null, elapsed = 0, remaining = 0;
+    var toastT = null, flashT = null;
 
     function fmt(s) {
       var m = Math.floor(s / 60), sec = s % 60;
@@ -304,37 +317,86 @@
       }
       return a;
     }
-    function startTimer() {
-      startTime = Date.now();
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastT);
+      toastT = setTimeout(function () { toastEl.classList.remove('show'); }, 1200);
+    }
+
+    // Size the board so ALL rows fit within the viewport (never overflow).
+    function fitBoard(L) {
+      var gap = Math.min(11, Math.max(5, window.innerWidth * 0.016));
+      var hudH = (document.querySelector('.hud') || {}).offsetHeight || 64;
+      var availH = window.innerHeight - 64 /*top pad*/ - hudH - 60 /*restart*/ - 28;
+      var availW = Math.min(640, window.innerWidth - 24);
+      // card aspect = 3/4 (h = w * 4/3). Solve max card width so rows fit in height.
+      var cardWfromH = ((availH - (L.rows - 1) * gap) / L.rows) * 0.75;
+      var WfromH = cardWfromH * L.cols + (L.cols - 1) * gap;
+      var W = Math.min(availW, WfromH);
+      boardEl.style.maxWidth = Math.max(150, Math.floor(W)) + 'px';
+    }
+
+    function startTimer(secs) {
       clearInterval(timer);
-      timer = setInterval(function () {
-        elapsed = Math.floor((Date.now() - startTime) / 1000);
-        timeEl.textContent = fmt(elapsed);
-      }, 250);
+      startTime = Date.now();
+      elapsed = 0;
+      if (secs > 0) {
+        remaining = secs;
+        timeEl.textContent = fmt(remaining);
+        timer = setInterval(function () {
+          elapsed = Math.floor((Date.now() - startTime) / 1000);
+          remaining = secs - elapsed;
+          if (remaining <= 0) {
+            remaining = 0; timeEl.textContent = fmt(0);
+            clearInterval(timer);
+            onTimeout();
+            return;
+          }
+          timeEl.textContent = fmt(remaining);
+        }, 250);
+      } else {
+        remaining = 0;
+        timeEl.textContent = '0:00';
+        timer = setInterval(function () {
+          elapsed = Math.floor((Date.now() - startTime) / 1000);
+          timeEl.textContent = fmt(elapsed);
+        }, 250);
+      }
+    }
+
+    function onTimeout() {
+      if (!playing) return;
+      locked = true;
+      SFX.play('wrong');
+      toast("⏱ Time's up — try again!");
+      setTimeout(build, 1300);
     }
 
     function build() {
+      clearInterval(timer);
+      clearTimeout(flashT);
       var L = LEVELS[level];
       totalPairs = L.pairs;
-      moves = 0; matched = 0; elapsed = 0;
-      first = second = null; busy = false; locked = false;
-      movesEl.textContent = '0';
+      moves = 0; matched = 0; elapsed = 0; remaining = 0;
+      first = second = null; busy = false; locked = true; playing = true;
+
+      levelEl.innerHTML = (level + 1) + '<span>/20</span>';
       pairsEl.innerHTML = '0<span>/' + totalPairs + '</span>';
       timeEl.textContent = '0:00';
+      scoreEl.textContent = totalScore;
 
-      // pick pairs and duplicate
+      // pick faces and duplicate into a deck
       var chosen = shuffle(ITEMS.slice()).slice(0, totalPairs);
       var deck = shuffle(chosen.concat(chosen));
 
       boardEl.style.gridTemplateColumns = 'repeat(' + L.cols + ', 1fr)';
-      // keep board within viewport height: cap max-width by row count
-      var maxW = Math.min(640, (L.cols / L.rows) * (window.innerHeight - 190) * 0.75);
-      boardEl.style.maxWidth = maxW > 220 ? maxW + 'px' : '';
+      fitBoard(L);
       boardEl.innerHTML = '';
 
       deck.forEach(function (item) {
         var card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card flipped'; // start face-up for the preview flash
         card.innerHTML =
           '<div class="face back"><span class="logo">💠</span></div>' +
           '<div class="face front"><span class="emoji">' + item[0] +
@@ -343,7 +405,15 @@
         card.addEventListener('click', function () { flip(card); });
         boardEl.appendChild(card);
       });
-      startTimer();
+
+      // preview flash — memorize, then hide
+      toast('🧠 Memorize!');
+      flashT = setTimeout(function () {
+        var cards = boardEl.querySelectorAll('.card');
+        for (var i = 0; i < cards.length; i++) cards[i].classList.remove('flipped');
+        locked = false;
+        startTimer(L.secs);
+      }, L.flash);
     }
 
     function flip(card) {
@@ -355,11 +425,9 @@
       if (!first) { first = card; return; }
       second = card;
       moves++;
-      movesEl.textContent = moves;
       busy = true;
 
       if (first._key === second._key) {
-        // match!
         setTimeout(function () {
           first.classList.add('matched');
           second.classList.add('matched');
@@ -368,7 +436,7 @@
           matched++;
           pairsEl.innerHTML = matched + '<span>/' + totalPairs + '</span>';
           first = second = null; busy = false;
-          if (matched === totalPairs) win();
+          if (matched === totalPairs) boardCleared();
         }, 260);
       } else {
         SFX.play('wrong');
@@ -381,26 +449,38 @@
     }
 
     function computeScore() {
-      // reward fewer moves & faster time. base per level, minus penalties.
       var L = LEVELS[level];
-      var base = 1000 + level * 500;
-      var perfectMoves = L.pairs;              // minimum possible flips-pairs
-      var movePenalty = (moves - perfectMoves) * 12;
-      var timePenalty = elapsed * 3;
-      var s = base - movePenalty - timePenalty;
+      var base = 800 + level * 120;
+      var movePenalty = Math.max(0, (moves - L.pairs)) * 8;
+      var timeBonus = L.secs > 0 ? remaining * 4 : Math.max(0, 90 - elapsed) * 2;
+      var s = base - movePenalty + timeBonus;
       return Math.max(50, Math.round(s));
     }
 
-    function win() {
+    function boardCleared() {
       clearInterval(timer);
       locked = true;
-      var score = computeScore();
-      var isBest = Arcade.best(SLUG, score);
-      bestEl.textContent = Arcade.best(SLUG);
+      var s = computeScore();
+      totalScore += s;
+      scoreEl.textContent = totalScore;
+      Arcade.best(SLUG, totalScore); // persist climb progress to the leaderboard
 
-      document.getElementById('wMoves').textContent = moves;
-      document.getElementById('wTime').textContent = fmt(elapsed);
-      document.getElementById('wScore').textContent = score;
+      if (level >= 19) { grandVictory(); return; }
+
+      SFX.play('win');
+      toast('✅ Level ' + (level + 1) + ' cleared!  +' + s);
+      level++;
+      setTimeout(build, 1350);
+    }
+
+    function grandVictory() {
+      playing = false;
+      locked = true;
+      var finalScore = totalScore;
+      var isBest = Arcade.best(SLUG, finalScore);
+
+      document.getElementById('wScore').textContent = finalScore;
+      document.getElementById('wBest').textContent = Arcade.best(SLUG);
       document.getElementById('newbest').textContent = isBest ? '★ New Best Score! ★' : '';
 
       SFX.play('win');
@@ -408,49 +488,43 @@
       Arcade.confetti();
       setTimeout(function () {
         document.getElementById('winOverlay').classList.remove('hide');
-      }, 500);
+      }, 550);
     }
 
-    // ---- level selector ----
-    var lvlEls = document.querySelectorAll('#levels .lvl');
-    lvlEls.forEach(function (le) {
-      le.addEventListener('click', function () {
-        lvlEls.forEach(function (x) { x.classList.remove('on'); });
-        le.classList.add('on');
-        level = parseInt(le.getAttribute('data-level'), 10);
-        SFX.play('select');
-      });
-    });
+    function startClimb() {
+      level = 0; totalScore = 0;
+      scoreEl.textContent = '0';
+      build();
+    }
 
     // ---- buttons ----
     document.getElementById('startBtn').addEventListener('click', function () {
       SFX.play('start');
       document.getElementById('startOverlay').classList.add('hide');
-      build();
+      startClimb();
     });
     document.getElementById('restart').addEventListener('click', function () {
+      if (!playing) return;
       SFX.play('click');
-      build();
+      build(); // rebuild current level (no advance)
     });
     document.getElementById('againBtn').addEventListener('click', function () {
       SFX.play('start');
       document.getElementById('winOverlay').classList.add('hide');
-      build();
+      startClimb();
     });
     document.getElementById('menuBtn').addEventListener('click', function () {
       SFX.play('click');
       clearInterval(timer);
-      locked = true;
+      clearTimeout(flashT);
+      playing = false; locked = true;
       document.getElementById('winOverlay').classList.add('hide');
       document.getElementById('startOverlay').classList.remove('hide');
     });
 
-    // re-fit board on rotate/resize
+    // re-fit board on rotate/resize so cards always fit the viewport
     window.addEventListener('resize', function () {
-      if (locked || !LEVELS[level]) return;
-      var L = LEVELS[level];
-      var maxW = Math.min(640, (L.cols / L.rows) * (window.innerHeight - 190) * 0.75);
-      boardEl.style.maxWidth = maxW > 220 ? maxW + 'px' : '';
+      if (playing && LEVELS[level]) fitBoard(LEVELS[level]);
     });
   })();
   </script>

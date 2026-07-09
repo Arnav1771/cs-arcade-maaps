@@ -128,7 +128,7 @@
     <!-- BOARD -->
     <section class="panel left">
       <div class="statusrow">
-        <span class="pill" id="levelPill">Level 1 / 5</span>
+        <span class="pill" id="levelPill">Level 1 / 20</span>
         <span class="pill" id="scorePill">Score 0</span>
         <span class="pill" id="bestPill">Best 0</span>
       </div>
@@ -174,14 +174,46 @@
 
   // Levels: n=grid size, start{r,c,d}, goal{r,c}, walls[[r,c]], par=min commands
   var LEVELS=[
+    // 1: straight line
     { n:5, start:{r:4,c:2,d:0}, goal:{r:0,c:2}, walls:[], par:4 },
+    // 2: one dogleg
     { n:5, start:{r:4,c:0,d:0}, goal:{r:0,c:4}, walls:[[2,2],[3,2]], par:9 },
-    { n:6, start:{r:5,c:0,d:1}, goal:{r:0,c:5},
-      walls:[[2,2],[2,3],[3,2],[3,3],[1,1],[4,4]], par:11 },
-    { n:6, start:{r:5,c:0,d:0}, goal:{r:0,c:5},
-      walls:[[0,0],[0,1],[1,0],[1,1],[4,2],[3,4]], par:12 },
-    { n:7, start:{r:6,c:0,d:0}, goal:{r:0,c:6},
-      walls:[[0,0],[1,0],[2,0],[3,0],[6,3],[2,2],[3,3],[5,5],[1,2]], par:15 }
+    // 3: diagonal steps
+    { n:5, start:{r:4,c:0,d:0}, goal:{r:0,c:4}, walls:[[3,1],[2,2],[1,3],[3,3]], par:10 },
+    // 4: L-shape with block
+    { n:5, start:{r:4,c:0,d:1}, goal:{r:0,c:4}, walls:[[3,1],[3,2],[3,3],[1,1],[1,2]], par:11 },
+    // 5: two corridors
+    { n:6, start:{r:5,c:0,d:0}, goal:{r:0,c:5}, walls:[[2,2],[2,3],[3,2],[3,3],[1,1],[4,4]], par:12 },
+    // 6: zigzag
+    { n:6, start:{r:5,c:0,d:0}, goal:{r:0,c:5}, walls:[[4,1],[3,1],[3,2],[3,3],[1,2],[1,3],[1,4]], par:14 },
+    // 7: corner box
+    { n:6, start:{r:5,c:0,d:1}, goal:{r:0,c:5}, walls:[[0,0],[0,1],[1,0],[1,1],[4,2],[3,4],[2,3]], par:14 },
+    // 8: comb
+    { n:6, start:{r:5,c:2,d:0}, goal:{r:0,c:0}, walls:[[4,0],[4,1],[4,3],[4,4],[2,1],[2,2],[2,3],[2,4]], par:15 },
+    // 9: teeth
+    { n:7, start:{r:6,c:0,d:0}, goal:{r:0,c:6}, walls:[[5,1],[4,1],[3,1],[3,3],[4,3],[5,3],[1,3],[2,3],[3,5],[4,5],[5,5]], par:18 },
+    // 10: wall maze
+    { n:7, start:{r:6,c:0,d:0}, goal:{r:0,c:6}, walls:[[5,0],[5,1],[5,2],[3,2],[3,3],[3,4],[1,0],[1,1],[1,2],[4,5],[2,5]], par:18 },
+    // 11: staircase
+    { n:7, start:{r:6,c:0,d:1}, goal:{r:0,c:6}, walls:[[5,1],[4,1],[4,2],[3,2],[3,3],[2,3],[2,4],[1,4],[1,5],[5,4],[5,5]], par:20 },
+    // 12: rooms
+    { n:7, start:{r:6,c:0,d:0}, goal:{r:0,c:6}, walls:[[4,0],[4,1],[4,2],[4,3],[2,3],[2,4],[2,5],[2,6],[5,5],[1,1]], par:20 },
+    // 13: dense chambers
+    { n:7, start:{r:6,c:3,d:0}, goal:{r:0,c:3}, walls:[[5,0],[5,1],[5,5],[5,6],[3,1],[3,2],[3,4],[3,5],[1,0],[1,1],[1,5],[1,6],[5,3]], par:22 },
+    // 14: switchbacks
+    { n:8, start:{r:7,c:0,d:0}, goal:{r:0,c:7}, walls:[[6,1],[5,1],[4,1],[4,2],[4,3],[4,4],[2,3],[2,4],[2,5],[2,6],[6,5],[6,6]], par:24 },
+    // 15: cross walls
+    { n:8, start:{r:7,c:0,d:1}, goal:{r:0,c:7}, walls:[[6,2],[5,2],[4,2],[3,2],[3,3],[3,4],[3,5],[1,4],[1,5],[1,6],[5,5],[6,5]], par:24 },
+    // 16: pillars
+    { n:8, start:{r:7,c:0,d:0}, goal:{r:0,c:7}, walls:[[6,1],[6,3],[6,5],[4,1],[4,3],[4,5],[2,1],[2,3],[2,5],[5,6],[3,6],[1,2]], par:26 },
+    // 17: long corridor
+    { n:8, start:{r:7,c:0,d:0}, goal:{r:0,c:0}, walls:[[6,0],[6,1],[6,2],[6,3],[6,4],[4,3],[4,4],[4,5],[4,6],[4,7],[2,0],[2,1],[2,2],[2,3],[2,4]], par:28 },
+    // 18: labyrinth
+    { n:8, start:{r:7,c:0,d:1}, goal:{r:0,c:7}, walls:[[6,1],[5,1],[4,1],[4,2],[4,3],[6,3],[6,4],[6,5],[2,1],[2,2],[2,3],[2,4],[2,5],[4,5],[4,6],[1,6]], par:30 },
+    // 19: tight grid
+    { n:8, start:{r:7,c:3,d:0}, goal:{r:0,c:4}, walls:[[6,0],[6,1],[6,2],[6,4],[6,5],[6,6],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6],[2,0],[2,1],[2,2],[2,4],[2,5],[2,6],[6,3]], par:30 },
+    // 20: grand serpentine maze
+    { n:8, start:{r:7,c:0,d:0}, goal:{r:0,c:7}, walls:[[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6],[4,7],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[2,6],[0,0],[0,1],[1,0]], par:34 }
   ];
 
   var boardEl=document.getElementById('board');
@@ -363,7 +395,7 @@
     document.getElementById('bestPill').textContent='Best '+best;
     SFX.play('fanfare'); Arcade.confetti(2200);
     show('🏆 All Mazes Solved!',
-      '<p>You wrote 5 working algorithms — the robot followed every step in order!</p>'+
+      '<p>You wrote '+LEVELS.length+' working algorithms — the robot followed every step in order!</p>'+
       '<div class="score-big">'+totalScore+'</div><p>final score'+
       (isBest?' · 🌟 New Best!':(' · Best '+best))+'</p>',
       '↺ Play Again', function(){

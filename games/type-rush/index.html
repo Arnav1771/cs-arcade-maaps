@@ -101,7 +101,7 @@
   }
   .btn:hover { transform:translateY(-2px); }
   .btn:active { transform:translateY(0); }
-  #finalScore { font-size:44px; font-weight:800; color:var(--accent); text-shadow:0 0 14px var(--accent); }
+  #finalScore, #winScore { font-size:44px; font-weight:800; color:var(--accent); text-shadow:0 0 14px var(--accent); }
   .fbrow { display:flex; gap:20px; font-size:14px; color:#9fe0ea; }
   .fbrow b { color:#eafcff; font-size:18px; display:block; }
 </style>
@@ -110,7 +110,7 @@
 <div id="wrap">
   <div id="hud">
     <div class="stat"><div class="lbl">Score</div><div class="val" id="score">0</div></div>
-    <div class="stat"><div class="lbl">Level</div><div class="val" id="level">1</div></div>
+    <div class="stat"><div class="lbl">Level</div><div class="val" id="level">1/20</div></div>
     <div class="stat" id="lives"><div class="lbl">Lives</div><div class="val" id="livesVal">♥♥♥</div></div>
     <div class="stat"><div class="lbl">WPM</div><div class="val" id="wpm">0</div></div>
     <div class="stat"><div class="lbl">Best</div><div class="val" id="best">0</div></div>
@@ -139,6 +139,19 @@
         <div>Best score<b id="finalBest">0</b></div>
       </div>
       <button class="btn" id="againBtn">↻ Play Again</button>
+    </div>
+
+    <!-- VICTORY overlay -->
+    <div class="overlay hidden" id="winScreen">
+      <div class="title" style="font-size:clamp(30px,7.5vw,54px)">You&nbsp;<span class="cy">Win!</span></div>
+      <div class="sub">You cleared all <b>20 levels</b> of Type Rush — a certified fast-fingers hacker. 🏆</div>
+      <div id="winScore" style="font-size:38px">0</div>
+      <div class="fbrow">
+        <div>Words zapped<b id="winWords">0</b></div>
+        <div>Best WPM<b id="winWpm">0</b></div>
+        <div>Best score<b id="winBest">0</b></div>
+      </div>
+      <button class="btn" id="winAgainBtn">↻ Play Again</button>
     </div>
   </div>
 
@@ -180,6 +193,12 @@
   var input = document.getElementById('hiddenInput');
   var startScreen = document.getElementById('startScreen');
   var overScreen = document.getElementById('overScreen');
+  var winScreen = document.getElementById('winScreen');
+
+  // ---- 20-level climb -----------------------------------------------------
+  var MAX_LEVEL = 20;         // clearing level 20 = victory
+  var WORDS_PER_LEVEL = 8;    // words to zap to advance one level
+  var won = false;            // becomes true once the 20-level win has fired
 
   // ---- state --------------------------------------------------------------
   var words = [];        // active falling words
@@ -191,9 +210,10 @@
 
   $best.textContent = Arcade.best(SLUG);
 
-  // level tuning
-  function fallSpeed() { return 26 + (level - 1) * 7; }        // px / second
-  function spawnInterval() { return Math.max(750, 2100 - (level - 1) * 150); } // ms
+  // level tuning — difficulty rises steadily across all 20 levels
+  function lvl() { return Math.min(level, MAX_LEVEL); }         // cap ramp at 20
+  function fallSpeed() { return 24 + (lvl() - 1) * 6.5; }       // px/s: L1≈24 … L20≈148
+  function spawnInterval() { return Math.max(480, 2200 - (lvl() - 1) * 88); } // ms: L1≈2200 … L20≈528
 
   function pickWord() {
     var w, tries = 0;
@@ -302,9 +322,11 @@
   window.addEventListener('keydown', function () { if (running) input.focus(); });
 
   function maybeLevelUp() {
-    var nl = Math.floor(cleared / 8) + 1;
+    // clearing all 20 levels (WORDS_PER_LEVEL words each) = victory
+    if (!won && cleared >= MAX_LEVEL * WORDS_PER_LEVEL) { victory(); return; }
+    var nl = Math.min(MAX_LEVEL, Math.floor(cleared / WORDS_PER_LEVEL) + 1);
     if (nl > level) {
-      level = nl; $level.textContent = level;
+      level = nl; $level.textContent = level + '/' + MAX_LEVEL;
       SFX.play('powerup');
     }
   }
@@ -342,9 +364,9 @@
   function reset() {
     words.forEach(function (w) { w.el.remove(); });
     words = []; used = [];
-    score = 0; lives = 3; level = 1; cleared = 0;
+    score = 0; lives = 3; level = 1; cleared = 0; won = false;
     correctChars = 0; bestWpm = 0;
-    $score.textContent = '0'; $level.textContent = '1';
+    $score.textContent = '0'; $level.textContent = '1/' + MAX_LEVEL;
     $livesVal.textContent = '♥♥♥'; $wpm.textContent = '0';
     input.value = ''; $typed.textContent = '';
   }
@@ -353,6 +375,7 @@
     reset();
     startScreen.classList.add('hidden');
     overScreen.classList.add('hidden');
+    winScreen.classList.add('hidden');
     running = true;
     startTime = performance.now();
     lastFrame = startTime;
@@ -376,8 +399,29 @@
     if (isBest && score > 0) { SFX.play('fanfare'); Arcade.confetti(); }
   }
 
+  // beating all 20 levels — a real win, distinct from losing all lives
+  function victory() {
+    won = true;
+    running = false;
+    level = MAX_LEVEL; $level.textContent = MAX_LEVEL + '/' + MAX_LEVEL;
+    // clear any words still falling
+    words.forEach(function (w) { w.el.remove(); });
+    words = []; used = [];
+    var isBest = Arcade.best(SLUG, score);
+    var bestNow = Arcade.best(SLUG);
+    $best.textContent = bestNow;
+    document.getElementById('winScore').textContent = score;
+    document.getElementById('winWords').textContent = cleared;
+    document.getElementById('winWpm').textContent = bestWpm;
+    document.getElementById('winBest').textContent = bestNow;
+    winScreen.classList.remove('hidden');
+    SFX.play('win'); SFX.play('fanfare');
+    Arcade.confetti();
+  }
+
   document.getElementById('startBtn').addEventListener('click', function () { SFX.play('click'); start(); });
   document.getElementById('againBtn').addEventListener('click', function () { SFX.play('click'); start(); });
+  document.getElementById('winAgainBtn').addEventListener('click', function () { SFX.play('click'); start(); });
 })();
 </script>
 </body>

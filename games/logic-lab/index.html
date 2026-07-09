@@ -166,18 +166,36 @@
 
   // ---- levels: stages evaluate left-to-right; 'g0' feeds a later gate ----
   var LEVELS=[
+    // 1-3: the friendly basics
     { name:'AND Gate',  goal:1, layout:'single2', stages:[{type:'AND', from:['A','B']}], tip:'AND needs BOTH switches ON.' },
     { name:'OR Gate',   goal:1, layout:'single2', stages:[{type:'OR',  from:['A','B']}], tip:'OR needs AT LEAST ONE switch ON.' },
     { name:'NOT Gate',  goal:1, layout:'single1', stages:[{type:'NOT', from:['A']}],      tip:'NOT flips the input around.' },
+    // 4-6: same gates, opposite goals (turn the bulb OFF)
+    { name:'AND Gate',  goal:0, layout:'single2', stages:[{type:'AND', from:['A','B']}], tip:'AND is OFF unless BOTH are ON.' },
+    { name:'OR Gate',   goal:0, layout:'single2', stages:[{type:'OR',  from:['A','B']}], tip:'OR is OFF only when BOTH are OFF.' },
     { name:'NOT Gate',  goal:0, layout:'single1', stages:[{type:'NOT', from:['A']}],      tip:'NOT flips it: switch ON makes output OFF.' },
+    // 7-8: XOR both ways
     { name:'XOR Gate',  goal:1, layout:'single2', stages:[{type:'XOR', from:['A','B']}], tip:'XOR = ON only when the switches DIFFER.' },
-    { name:'NAND Gate', goal:0, layout:'single2', stages:[{type:'NAND',from:['A','B']}], tip:'NAND is OFF only when both are ON.' },
     { name:'XOR Gate',  goal:0, layout:'single2', stages:[{type:'XOR', from:['A','B']}], tip:'XOR = OFF when the switches MATCH.' },
-    { name:'AND → NOT', goal:0, layout:'double',  stages:[{type:'AND',from:['A','B']},{type:'NOT',from:['g0']}], tip:'Two gates! NOT flips the AND result.' },
-    { name:'OR → NOT',  goal:1, layout:'double',  stages:[{type:'OR', from:['A','B']},{type:'NOT',from:['g0']}], tip:'NOT flips the OR result — this is a NOR.' }
+    // 9-10: NAND (an AND with a bubble that flips it)
+    { name:'NAND Gate', goal:0, layout:'single2', stages:[{type:'NAND',from:['A','B']}], tip:'NAND is OFF only when BOTH are ON.' },
+    { name:'NAND Gate', goal:1, layout:'single2', stages:[{type:'NAND',from:['A','B']}], tip:'NAND is ON unless both switches are ON.' },
+    // 11-12: NOR (an OR with a bubble that flips it)
+    { name:'NOR Gate',  goal:0, layout:'single2', stages:[{type:'NOR', from:['A','B']}], tip:'NOR is OFF when ANY switch is ON.' },
+    { name:'NOR Gate',  goal:1, layout:'single2', stages:[{type:'NOR', from:['A','B']}], tip:'NOR is ON only when BOTH are OFF.' },
+    // 13-14: XNOR (the opposite of XOR)
+    { name:'XNOR Gate', goal:1, layout:'single2', stages:[{type:'XNOR',from:['A','B']}], tip:'XNOR = ON when the switches MATCH.' },
+    { name:'XNOR Gate', goal:0, layout:'single2', stages:[{type:'XNOR',from:['A','B']}], tip:'XNOR = OFF when the switches DIFFER.' },
+    // 15-20: capstones — TWO gates wired in series (a gate feeding a NOT)
+    { name:'NOT (A AND B)',  goal:1, layout:'double', stages:[{type:'AND', from:['A','B']},{type:'NOT',from:['g0']}], tip:'AND feeds a NOT: the bulb is ON unless BOTH switches are ON.' },
+    { name:'NOT (A OR B)',   goal:1, layout:'double', stages:[{type:'OR',  from:['A','B']},{type:'NOT',from:['g0']}], tip:'OR feeds a NOT: ON only when BOTH switches are OFF.' },
+    { name:'NOT (A XOR B)',  goal:1, layout:'double', stages:[{type:'XOR', from:['A','B']},{type:'NOT',from:['g0']}], tip:'XOR feeds a NOT: ON when the two switches MATCH.' },
+    { name:'NOT (A AND B)',  goal:0, layout:'double', stages:[{type:'AND', from:['A','B']},{type:'NOT',from:['g0']}], tip:'Same circuit — now turn it OFF. That needs BOTH switches ON.' },
+    { name:'NOT (A NAND B)', goal:1, layout:'double', stages:[{type:'NAND',from:['A','B']},{type:'NOT',from:['g0']}], tip:'Two flips cancel: this is ON only when BOTH switches are ON.' },
+    { name:'NOT (A NOR B)',  goal:1, layout:'double', stages:[{type:'NOR', from:['A','B']},{type:'NOT',from:['g0']}], tip:'Two flips cancel: this is ON when AT LEAST ONE switch is ON.' }
   ];
 
-  var idx=0, score=0, st={A:0,B:0}, solved=false;
+  var idx=0, score=0, st={A:0,B:0,C:0}, solved=false;
   var $=function(id){ return document.getElementById(id); };
   $('best').textContent = Arcade.best(SLUG);
 
@@ -189,6 +207,8 @@
       case 'NOT':  return v[0]?0:1;
       case 'XOR':  return (v[0]!==v[1])?1:0;
       case 'NAND': return (v[0]&&v[1])?0:1;
+      case 'NOR':  return (v[0]||v[1])?0:1;
+      case 'XNOR': return (v[0]!==v[1])?0:1;
     }
     return 0;
   }

@@ -174,11 +174,11 @@
 <body>
   <div class="head">
     <div class="title">SIMON SIGNALS</div>
-    <div class="tag">🎧 Computers follow exact sequences — train your memory to repeat the pattern.</div>
+    <div class="tag">🎧 Computers follow exact sequences — repeat the pattern up to Level 20 to win.</div>
   </div>
 
   <div class="stats">
-    <div class="chip"><div class="k">Round</div><div class="v" id="roundStat">0</div></div>
+    <div class="chip"><div class="k">Level</div><div class="v" id="levelStat">0/20</div></div>
     <div class="chip"><div class="k">Best</div><div class="v" id="bestStat">0</div></div>
   </div>
 
@@ -187,7 +187,7 @@
     <button class="pad red tr"    data-i="1" aria-label="red pad"></button>
     <button class="pad yellow bl" data-i="2" aria-label="yellow pad"></button>
     <button class="pad blue br"   data-i="3" aria-label="blue pad"></button>
-    <div class="hub"><span class="lvl">Round</span><span class="num" id="hubNum">–</span></div>
+    <div class="hub"><span class="lvl">Level</span><span class="num" id="hubNum">–</span></div>
   </div>
 
   <div class="controls">
@@ -202,9 +202,21 @@
       <h2>Signal Lost!</h2>
       <p>You repeated the pattern up to</p>
       <div class="big" id="finalRound">0</div>
-      <p>rounds.</p>
+      <p>levels.</p>
       <div class="newbest" id="newBest"></div>
       <button class="action" id="againBtn">↻ Play Again</button>
+    </div>
+  </div>
+
+  <div class="over" id="win">
+    <div class="panel">
+      <h2 style="color:#fde047">🏆 Memory Master!</h2>
+      <p>You perfectly repeated a</p>
+      <div class="big" id="winLevel">20</div>
+      <p>signal sequence — Level 20 cleared!</p>
+      <div class="newbest" id="winBest"></div>
+      <button class="action" id="continueBtn">➜ Endless Bonus</button>
+      <button class="action" id="winAgainBtn" style="margin-top:10px;background:linear-gradient(180deg,#a78bfa,#7c3aed)">↻ Play Again</button>
     </div>
   </div>
 
@@ -214,6 +226,7 @@
   (function () {
     'use strict';
     var SLUG = 'simon-signals';
+    var TARGET = 20; // reach a 20-signal sequence to win
     Arcade.mount({ title: 'Simon Signals', accent: '#ec4899' });
 
     // Each pad: its own colour class + its own distinct tone frequency.
@@ -226,7 +239,7 @@
 
     var board   = document.getElementById('board');
     var padEls   = Array.prototype.slice.call(board.querySelectorAll('.pad'));
-    var roundStat = document.getElementById('roundStat');
+    var levelStat = document.getElementById('levelStat');
     var bestStat  = document.getElementById('bestStat');
     var hubNum    = document.getElementById('hubNum');
     var msg       = document.getElementById('msg');
@@ -237,11 +250,17 @@
     var finalRound = document.getElementById('finalRound');
     var newBest   = document.getElementById('newBest');
     var againBtn  = document.getElementById('againBtn');
+    var winOver   = document.getElementById('win');
+    var winLevel  = document.getElementById('winLevel');
+    var winBest   = document.getElementById('winBest');
+    var continueBtn = document.getElementById('continueBtn');
+    var winAgainBtn = document.getElementById('winAgainBtn');
 
-    var sequence = [];     // the growing list of pad indices
+    var sequence = [];     // the growing list of pad indices (length = current level)
     var inputPos = 0;      // how far the player is through repeating
     var playing = false;   // a game is in progress
     var accepting = false; // player input allowed right now
+    var won = false;        // victory (Level 20) already reached this game
 
     bestStat.textContent = Arcade.best(SLUG);
 
@@ -253,13 +272,11 @@
       setTimeout(function () { el.classList.remove('lit'); }, dur);
     }
 
-    // Speed: pads play a little faster as rounds climb.
+    // Speed: pads play a little faster as levels climb, but stay fair.
+    // Gentle linear ramp: Level 1 ≈ 720ms, Level 20 ≈ 378ms, then floored.
     function stepTime() {
-      var r = sequence.length;
-      if (r >= 13) return 380;
-      if (r >= 9)  return 460;
-      if (r >= 6)  return 560;
-      return 640;
+      var level = sequence.length;
+      return Math.max(360, 720 - (level - 1) * 18);
     }
 
     function setLocked(locked) {
@@ -292,13 +309,18 @@
       }, total);
     }
 
-    // Begin a new round: append one random signal, flash "Round N", replay.
+    function updateHud() {
+      var r = sequence.length;
+      levelStat.textContent = r + '/' + TARGET;
+      hubNum.textContent = r > TARGET ? (TARGET + '+') : r;
+    }
+
+    // Begin a new level: append one random signal, flash "Level N", replay.
     function nextRound() {
       sequence.push((Math.random() * 4) | 0);
       var r = sequence.length;
-      roundStat.textContent = r;
-      hubNum.textContent = r;
-      showFlash('Round ' + r);
+      updateHud();
+      showFlash(r > TARGET ? ('Bonus ' + r) : ('Level ' + r + '/' + TARGET));
       SFX.play('blip');
       setTimeout(playSequence, 850);
     }
@@ -307,9 +329,12 @@
       sequence = [];
       inputPos = 0;
       playing = true;
+      won = false;
       over.classList.remove('show');
+      winOver.classList.remove('show');
       startBtn.style.display = 'none';
-      roundStat.textContent = '0';
+      levelStat.textContent = '0/' + TARGET;
+      hubNum.textContent = '–';
       SFX.play('start');
       msg.textContent = 'Get ready…';
       setTimeout(nextRound, 700);
@@ -335,6 +360,23 @@
       setTimeout(function () { over.classList.add('show'); }, 500);
     }
 
+    // Cleared Level 20 — a real WIN, separate from the wrong-pad game-over.
+    function victory() {
+      won = true;
+      setLocked(true);
+      var reached = sequence.length; // === TARGET at this point
+      msg.textContent = 'MEMORY MASTER!';
+      SFX.play('correct');
+      setTimeout(function () { SFX.play('fanfare'); }, 160);
+      Arcade.confetti();
+      showFlash('Memory Master!');
+      winLevel.textContent = reached;
+      var isBest = Arcade.best(SLUG, reached);
+      bestStat.textContent = Arcade.best(SLUG);
+      winBest.textContent = (isBest ? '🏆 New Best!' : '');
+      setTimeout(function () { winOver.classList.add('show'); }, 700);
+    }
+
     // Player pressed a pad.
     function press(i) {
       if (!playing || !accepting) return;
@@ -342,16 +384,29 @@
       if (i === sequence[inputPos]) {
         inputPos++;
         if (inputPos === sequence.length) {
-          // completed this round correctly
+          // completed this level's sequence correctly
           accepting = false;
+          if (sequence.length === TARGET && !won) {
+            // reaching Level 20 = victory
+            victory();
+            return;
+          }
           SFX.play('correct');
           setTimeout(function () { SFX.play('coin'); }, 120);
-          msg.textContent = 'Nice! Signal locked ✓';
+          msg.textContent = sequence.length >= TARGET ? 'Bonus locked ✓' : 'Nice! Signal locked ✓';
           setTimeout(nextRound, 900);
         }
       } else {
         gameOver();
       }
+    }
+
+    // Continue past Level 20 as endless bonus (no more win screens).
+    function continueEndless() {
+      winOver.classList.remove('show');
+      accepting = false;
+      msg.textContent = 'Endless bonus — keep going!';
+      setTimeout(nextRound, 700);
     }
 
     padEls.forEach(function (el) {
@@ -364,6 +419,15 @@
       SFX.play('click');
       over.classList.remove('show');
       startGame();
+    });
+    winAgainBtn.addEventListener('click', function () {
+      SFX.play('click');
+      winOver.classList.remove('show');
+      startGame();
+    });
+    continueBtn.addEventListener('click', function () {
+      SFX.play('click');
+      continueEndless();
     });
   })();
   </script>

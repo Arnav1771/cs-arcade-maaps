@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Word Wizard</title>
+<style>
+  :root {
+    --accent: #8b5cf6;
+    --accent-2: #a78bfa;
+    --accent-dim: #6d28d9;
+    --gold: #fbbf24;
+    --ok: #34d399;
+    --bad: #fb7185;
+    --bg0: #0a0616;
+    --bg1: #1a0f38;
+    --ink: #ece7fb;
+    --muted: #a99fd0;
+    --card: rgba(28, 18, 58, 0.72);
+    --line: rgba(139, 92, 246, 0.34);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 600px at 20% -10%, rgba(139,92,246,0.24), transparent 60%),
+      radial-gradient(700px 520px at 100% 0%, rgba(236,72,153,0.14), transparent 55%),
+      linear-gradient(160deg, var(--bg0), var(--bg1));
+    background-attachment: fixed;
+    min-height: 100%;
+    padding: 64px 14px 40px;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  /* twinkling star field for the "magic" feel */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image:
+      radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 70% 20%, #d8b4fe, transparent),
+      radial-gradient(2px 2px at 40% 70%, #fff, transparent),
+      radial-gradient(1.5px 1.5px at 85% 60%, #c4b5fd, transparent),
+      radial-gradient(1.5px 1.5px at 15% 85%, #fff, transparent),
+      radial-gradient(2px 2px at 60% 90%, #e9d5ff, transparent);
+    opacity: 0.55; animation: twinkle 4s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle { from { opacity: 0.3; } to { opacity: 0.7; } }
+
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px; backdrop-filter: blur(9px);
+    box-shadow: 0 18px 52px rgba(0,0,0,0.5), inset 0 0 40px rgba(139,92,246,0.06);
+  }
+  h1 { margin: 0 0 6px; font-size: clamp(26px, 7vw, 34px); letter-spacing: 1px; }
+  h1 .glyph { filter: drop-shadow(0 0 8px rgba(139,92,246,0.7)); }
+  .tag { color: var(--accent-2); font-weight: 700; letter-spacing: 2.5px; font-size: 12px; text-transform: uppercase; }
+  p.lead { color: var(--muted); line-height: 1.55; margin: 12px 0; }
+  .concept {
+    background: rgba(139,92,246,0.12); border: 1px dashed var(--line);
+    border-radius: 12px; padding: 12px 14px; margin: 14px 0; font-size: 14px; line-height: 1.55;
+  }
+  .concept b { color: var(--accent-2); }
+  .how { text-align: left; margin: 12px 0 4px; padding-left: 20px; color: var(--muted); line-height: 1.7; font-size: 14px; }
+  button {
+    font-family: inherit; cursor: pointer; border: none; border-radius: 12px;
+    font-weight: 800; letter-spacing: .4px; transition: transform .08s, box-shadow .2s, background .2s, opacity .2s;
+  }
+  button:active { transform: translateY(1px) scale(.97); }
+  button:disabled { opacity: .4; cursor: default; }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--accent-2), var(--accent-dim));
+    color: #fff; font-size: 17px; padding: 14px 28px;
+    box-shadow: 0 10px 26px rgba(139,92,246,0.45);
+  }
+  .btn-primary:hover { box-shadow: 0 14px 34px rgba(139,92,246,0.65); }
+  .btn-ghost {
+    background: rgba(139,92,246,0.14); color: var(--ink);
+    border: 1px solid var(--line); font-size: 14px; padding: 10px 16px;
+  }
+  .btn-ghost:hover { background: rgba(139,92,246,0.26); }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+
+  /* HUD */
+  .hud { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .pill {
+    background: rgba(10,6,22,0.6); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; font-weight: 700; color: var(--muted);
+  }
+  .pill b { color: var(--ink); }
+  .pill.score b { color: var(--gold); }
+  .progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(139,92,246,0.25); border: 1px solid var(--line); transition: background .25s, transform .25s; }
+  .dot.done { background: var(--gold); box-shadow: 0 0 10px rgba(251,191,36,0.7); transform: scale(1.15); }
+
+  /* clue */
+  .clue { text-align: center; margin-bottom: 14px; }
+  .emoji { font-size: clamp(46px, 15vw, 72px); line-height: 1; filter: drop-shadow(0 4px 14px rgba(0,0,0,.4)); }
+  .cat { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-2); margin-top: 6px; }
+  .definition {
+    margin: 10px auto 0; max-width: 460px; min-height: 20px; color: var(--gold);
+    font-size: 15px; line-height: 1.45; font-style: italic;
+  }
+
+  /* answer slots */
+  .slots { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 6px 0 18px; min-height: 58px; }
+  .slot {
+    width: 46px; height: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 900; text-transform: uppercase;
+    background: rgba(10,6,22,0.45); border: 2px dashed var(--line); color: var(--accent-2);
+  }
+  .slot.filled { background: linear-gradient(180deg, rgba(139,92,246,0.35), rgba(109,40,217,0.25)); border-style: solid; border-color: var(--accent-2); color: #fff; }
+  .slots.good .slot { border-color: var(--ok); color: var(--ok); box-shadow: 0 0 14px rgba(52,211,153,0.4); }
+  .slots.bad { animation: shake .35s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+
+  /* letter tiles */
+  .tiles { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 18px; }
+  .tile {
+    width: 52px; height: 58px; border-radius: 14px; font-size: 26px; font-weight: 900; text-transform: uppercase;
+    background: linear-gradient(180deg, #2d1b60, #1a0f38); color: var(--accent-2);
+    border: 1px solid var(--line); box-shadow: 0 6px 16px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .tile:hover:not(:disabled) { background: linear-gradient(180deg, #3d2580, #241456); color: #fff; }
+  .tile.used { opacity: .28; }
+
+  .controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* screens & scores */
+  .big-score { font-size: 56px; font-weight: 900; color: var(--gold); line-height: 1; margin: 8px 0; text-shadow: 0 0 22px rgba(251,191,36,0.5); }
+  .flash { animation: pop .4s; }
+  @keyframes pop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.12)} 100%{transform:scale(1);opacity:1} }
+  .streak { color: var(--accent-2); font-weight: 800; min-height: 18px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- START SCREEN -->
+  <section id="startScreen" class="card center">
+    <div class="tag">The Enchanted Spellbook</div>
+    <h1><span class="glyph">🧙‍♂️</span> Word Wizard</h1>
+    <p class="lead">A mischievous imp has scrambled the letters of every magic word! Tap the runes in the right order to break the spell and grow your powers.</p>
+    <div class="concept">
+      <b>The magic:</b> Every word is a <b>science &amp; computer</b> term. Unscramble it and
+      you'll learn what it means — from <b>byte</b> and <b>pixel</b> to <b>algorithm</b> and <b>electron</b>.
+    </div>
+    <ul class="how">
+      <li>A scrambled word appears as glowing letter <b>tiles</b> with an emoji clue.</li>
+      <li><b>Tap</b> tiles (or type on a keyboard) to spell the word. Use <b>⌫ Undo</b> to fix mistakes.</li>
+      <li>Solve fast and skip the Hint for <b>bonus points</b>. Clear each level's words to advance.</li>
+      <li>Reach <b>Level 20</b> to become a true Word Wizard!</li>
+    </ul>
+    <div style="margin-top:18px"><button id="startBtn" class="btn-primary">✨ Open the Spellbook</button></div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="gameScreen" class="card hidden">
+    <div class="hud">
+      <span class="pill">Level <b id="lvlNum">1</b>/20</span>
+      <span class="pill score">Score <b id="score">0</b></span>
+      <span class="pill">Best <b id="best">0</b></span>
+    </div>
+    <div class="progress" id="progress"></div>
+
+    <div class="clue">
+      <div class="emoji" id="emoji">✨</div>
+      <div class="cat" id="cat">CONJURE THE WORD</div>
+      <div class="definition" id="definition"></div>
+    </div>
+
+    <div class="slots" id="slots"></div>
+    <div class="tiles" id="tiles"></div>
+
+    <div class="controls">
+      <button id="undoBtn" class="btn-ghost">⌫ Undo</button>
+      <button id="clearBtn" class="btn-ghost">↺ Clear</button>
+      <button id="hintBtn" class="btn-ghost">💡 Hint (−15)</button>
+    </div>
+  </section>
+
+  <!-- WIN SCREEN -->
+  <section id="winScreen" class="card center hidden">
+    <div class="tag" id="endTag">Spell Mastered</div>
+    <h1 id="endTitle">🏆 Word Wizard!</h1>
+    <p class="lead" id="endMsg">You unscrambled every magic word and mastered the ancient spellbook.</p>
+    <div class="big-score" id="finalScore">0</div>
+    <div class="pill" style="display:inline-block">Best: <b id="finalBest">0</b></div>
+    <div style="margin-top:18px"><button id="againBtn" class="btn-primary">↻ Cast Again</button></div>
+  </section>
+
+</div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SLUG = 'word-wizard';
+  Arcade.mount({ title: 'Word Wizard', accent: '#8b5cf6' });
+
+  // ---- word bank: grouped by difficulty, each with a hint + emoji ----------
+  // Every entry unscrambles to a real word; letters only, no spaces.
+  var BANK = {
+    easy: [ // L1-5  (short, 3-5 letters)
+      { w: 'byte',  e: '🔢', d: 'Eight bits of computer data' },
+      { w: 'code',  e: '💻', d: 'Instructions a computer follows' },
+      { w: 'mouse', e: '🖱️', d: 'You move it to point on screen' },
+      { w: 'chip',  e: '🔲', d: 'A tiny silicon brain in devices' },
+      { w: 'data',  e: '📊', d: 'Information a computer stores' },
+      { w: 'file',  e: '📄', d: 'A saved document on a computer' },
+      { w: 'disk',  e: '💽', d: 'A spinning object that stores data' },
+      { w: 'link',  e: '🔗', d: 'Click it to jump to a web page' },
+      { w: 'app',   e: '📱', d: 'A program on your phone' },
+      { w: 'wifi',  e: '📶', d: 'Wireless internet connection' },
+      { w: 'bug',   e: '🐛', d: 'A mistake hiding in a program' },
+      { w: 'atom',  e: '⚛️', d: 'The smallest piece of an element' }
+    ],
+    medium: [ // L6-10 (5-6 letters)
+      { w: 'pixel',  e: '🟪', d: 'A tiny colored dot on a screen' },
+      { w: 'server', e: '🖥️', d: 'A computer that serves web pages' },
+      { w: 'binary', e: '🔟', d: 'Counting using only 0s and 1s' },
+      { w: 'memory', e: '🧠', d: 'Where a computer holds data in use' },
+      { w: 'cache',  e: '📦', d: 'Fast storage for quick access' },
+      { w: 'router', e: '📡', d: 'Sends internet to your devices' },
+      { w: 'cursor', e: '➡️', d: 'The pointer you move on screen' },
+      { w: 'folder', e: '📁', d: 'A place that holds files together' },
+      { w: 'laptop', e: '💻', d: 'A portable computer' },
+      { w: 'screen', e: '📺', d: 'You look at it to see the display' },
+      { w: 'robot',  e: '🤖', d: 'A machine that can act on its own' },
+      { w: 'planet', e: '🪐', d: 'A large world orbiting a star' }
+    ],
+    hard: [ // L11-15 (7-8 letters)
+      { w: 'keyboard', e: '⌨️', d: 'The board of keys you type on' },
+      { w: 'internet', e: '🌐', d: 'The global network of computers' },
+      { w: 'software', e: '💿', d: 'Programs that run on a computer' },
+      { w: 'hardware', e: '🔧', d: 'The physical parts of a computer' },
+      { w: 'database', e: '🗄️', d: 'An organized collection of data' },
+      { w: 'function', e: '🔣', d: 'A reusable block of code' },
+      { w: 'variable', e: '📥', d: 'A named box that stores a value' },
+      { w: 'computer', e: '🖥️', d: 'A machine that processes data' },
+      { w: 'download', e: '⬇️', d: 'Copy a file from the internet' },
+      { w: 'password', e: '🔒', d: 'A secret used to log in' },
+      { w: 'graphics', e: '🎨', d: 'Pictures a computer draws' },
+      { w: 'magnetic', e: '🧲', d: 'Attracts iron; how disks store data' }
+    ],
+    expert: [ // L16-20 (tough science + CS words)
+      { w: 'algorithm',  e: '🧮', d: 'A step-by-step recipe to solve a problem' },
+      { w: 'encryption', e: '🔐', d: 'Scrambling data to keep it secret' },
+      { w: 'processor',  e: '⚙️', d: 'The chip that runs the calculations' },
+      { w: 'bandwidth',  e: '🌊', d: 'How much data a connection can carry' },
+      { w: 'satellite',  e: '🛰️', d: 'Orbits Earth to relay signals' },
+      { w: 'telescope',  e: '🔭', d: 'A tool to see distant stars' },
+      { w: 'molecule',   e: '🧪', d: 'Two or more atoms joined together' },
+      { w: 'electron',   e: '⚡', d: 'A tiny negative particle in an atom' },
+      { w: 'gigabyte',   e: '💾', d: 'About a billion bytes of data' },
+      { w: 'developer',  e: '👩‍💻', d: 'A person who writes software' },
+      { w: 'gravity',    e: '🌍', d: 'The force that pulls things down' },
+      { w: 'hydrogen',   e: '🎈', d: 'The lightest chemical element' }
+    ]
+  };
+
+  // level -> difficulty tier
+  function tierFor(level) {
+    if (level <= 5) return 'easy';
+    if (level <= 10) return 'medium';
+    if (level <= 15) return 'hard';
+    return 'expert';
+  }
+  var WORDS_PER_LEVEL = 3;
+
+  // ---- helpers -------------------------------------------------------------
+  var $ = function (id) { return document.getElementById(id); };
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  // scramble a word's letters; guarantee it differs from the original
+  function scramble(word) {
+    var chars = word.split('');
+    var out;
+    do { out = shuffle(chars); } while (out.join('') === word && word.length > 1);
+    return out;
+  }
+
+  // ---- state ---------------------------------------------------------------
+  var startScreen = $('startScreen'), gameScreen = $('gameScreen'), winScreen = $('winScreen');
+  var slotsEl = $('slots'), tilesEl = $('tiles'), progEl = $('progress');
+  var emojiEl = $('emoji'), catEl = $('cat'), defEl = $('definition');
+  var scoreEl = $('score'), bestEl = $('best'), lvlNumEl = $('lvlNum');
+
+  var level = 1, wordSlot = 0;     // wordSlot = which word within the level (0..WORDS_PER_LEVEL-1)
+  var levelWords = [];             // words chosen for the current level
+  var current = null;              // { w, e, d }
+  var tiles = [];                  // { ch, used }
+  var placed = [];                 // indices into tiles, in tap order
+  var score = 0, hintUsed = false, solved = false, startTime = 0;
+  var decks = {};                  // per-tier shuffled deck to avoid repeats
+
+  function show(scr) {
+    [startScreen, gameScreen, winScreen].forEach(function (s) { s.classList.add('hidden'); });
+    scr.classList.remove('hidden');
+  }
+
+  // draw one fresh word from a tier's deck (reshuffle when exhausted)
+  function drawWord(tier) {
+    if (!decks[tier] || !decks[tier].length) decks[tier] = shuffle(BANK[tier]);
+    return decks[tier].pop();
+  }
+
+  function startLevel() {
+    lvlNumEl.textContent = level;
+    var tier = tierFor(level);
+    levelWords = [];
+    for (var i = 0; i < WORDS_PER_LEVEL; i++) levelWords.push(drawWord(tier));
+    wordSlot = 0;
+    renderProgress();
+    loadWord();
+  }
+
+  function renderProgress() {
+    progEl.innerHTML = '';
+    for (var i = 0; i < WORDS_PER_LEVEL; i++) {
+      var d = document.createElement('div');
+      d.className = 'dot' + (i < wordSlot ? ' done' : '');
+      progEl.appendChild(d);
+    }
+  }
+
+  function loadWord() {
+    current = levelWords[wordSlot];
+    hintUsed = false; solved = false; placed = [];
+    startTime = performance.now();
+    emojiEl.textContent = current.e;
+    catEl.textContent = 'CONJURE THE WORD · ' + tierFor(level).toUpperCase();
+    defEl.textContent = '';
+    $('hintBtn').disabled = false;
+    // build tiles from a scramble
+    tiles = scramble(current.w).map(function (ch) { return { ch: ch, used: false }; });
+    renderTiles();
+    renderSlots();
+  }
+
+  function renderTiles() {
+    tilesEl.innerHTML = '';
+    tiles.forEach(function (t, i) {
+      var b = document.createElement('button');
+      b.className = 'tile' + (t.used ? ' used' : '');
+      b.textContent = t.ch;
+      b.disabled = t.used;
+      b.addEventListener('click', function () { placeTile(i); });
+      tilesEl.appendChild(b);
+    });
+  }
+
+  function renderSlots(state) {
+    slotsEl.className = 'slots' + (state ? ' ' + state : '');
+    slotsEl.innerHTML = '';
+    for (var i = 0; i < current.w.length; i++) {
+      var s = document.createElement('div');
+      var idx = placed[i];
+      if (idx != null) { s.className = 'slot filled'; s.textContent = tiles[idx].ch; }
+      else { s.className = 'slot'; s.textContent = ''; }
+      slotsEl.appendChild(s);
+    }
+  }
+
+  function placeTile(i) {
+    if (solved || tiles[i].used || placed.length >= current.w.length) return;
+    tiles[i].used = true;
+    placed.push(i);
+    SFX.play(placed.length % 2 ? 'click' : 'type');
+    renderTiles(); renderSlots();
+    if (placed.length === current.w.length) checkAnswer();
+  }
+
+  function undo() {
+    if (solved || !placed.length) return;
+    var i = placed.pop();
+    tiles[i].used = false;
+    SFX.play('blip');
+    renderTiles(); renderSlots();
+  }
+
+  function clearAll() {
+    if (solved || !placed.length) return;
+    placed.forEach(function (i) { tiles[i].used = false; });
+    placed = [];
+    SFX.play('whoosh');
+    renderTiles(); renderSlots();
+  }
+
+  // type-a-letter support: place first unused tile matching the key
+  function typeLetter(ch) {
+    if (solved) return;
+    for (var i = 0; i < tiles.length; i++) {
+      if (!tiles[i].used && tiles[i].ch === ch) { placeTile(i); return; }
+    }
+  }
+
+  function currentGuess() { return placed.map(function (i) { return tiles[i].ch; }).join(''); }
+
+  function checkAnswer() {
+    if (currentGuess() !== current.w) {
+      SFX.play('wrong');
+      renderSlots('bad');
+      setTimeout(function () {
+        placed.forEach(function (i) { tiles[i].used = false; });
+        placed = [];
+        renderTiles(); renderSlots();
+      }, 380);
+      return;
+    }
+    // correct!
+    solved = true;
+    renderSlots('good');
+    SFX.play('correct');
+    setTimeout(function () { SFX.play('coin'); }, 130);
+
+    var secs = (performance.now() - startTime) / 1000;
+    var base = 40 + current.w.length * 8;            // longer words worth more
+    var speed = Math.max(0, Math.round(40 - secs * 4)); // solved fast = bonus
+    var noHint = hintUsed ? 0 : 30;                   // reward not peeking
+    var gained = base + speed + noHint;
+    score += gained;
+    scoreEl.textContent = score;
+
+    // briefly reveal the meaning before moving on
+    defEl.textContent = '“' + current.w.toUpperCase() + '” — ' + current.d + '  (+' + gained + ')';
+    $('hintBtn').disabled = true;
+
+    setTimeout(function () {
+      wordSlot++;
+      renderProgress();
+      if (wordSlot >= WORDS_PER_LEVEL) {          // level cleared
+        if (level >= 20) { winGame(); return; }
+        level++;
+        SFX.play('powerup');
+        setTimeout(startLevel, 220);
+      } else {
+        SFX.play('whoosh');
+        loadWord();
+      }
+    }, 1350);
+  }
+
+  function useHint() {
+    if (solved || hintUsed) return;
+    hintUsed = true;
+    score = Math.max(0, score - 15);
+    scoreEl.textContent = score;
+    defEl.textContent = current.d + '  ·  starts with “' + current.w[0].toUpperCase() + '”';
+    $('hintBtn').disabled = true;
+    SFX.play('powerup');
+  }
+
+  function winGame() {
+    SFX.play('win');
+    setTimeout(function () { SFX.play('fanfare'); }, 380);
+    var isNew = Arcade.best(SLUG, score);   // record final score once (feeds leaderboard)
+    $('endTag').textContent = 'Grand Wizard';
+    $('endTitle').textContent = '🏆 Word Wizard!';
+    $('endMsg').textContent = 'You cleared all 20 levels and mastered the ancient spellbook of science & computer words.';
+    $('finalScore').textContent = score;
+    $('finalScore').classList.add('flash');
+    $('finalBest').textContent = Arcade.best(SLUG);
+    show(winScreen);
+    Arcade.confetti();
+    if (isNew) setTimeout(function () { Arcade.confetti(); }, 700);
+  }
+
+  function restart() {
+    level = 1; score = 0; wordSlot = 0; decks = {};
+    scoreEl.textContent = 0;
+    bestEl.textContent = Arcade.best(SLUG);
+    show(gameScreen);
+    startLevel();
+  }
+
+  // ---- wiring --------------------------------------------------------------
+  bestEl.textContent = Arcade.best(SLUG);
+  $('startBtn').addEventListener('click', function () { SFX.play('start'); restart(); });
+  $('againBtn').addEventListener('click', function () { SFX.play('select'); restart(); });
+  $('undoBtn').addEventListener('click', undo);
+  $('clearBtn').addEventListener('click', clearAll);
+  $('hintBtn').addEventListener('click', useHint);
+
+  // physical keyboard: letters place tiles, Backspace undoes
+  document.addEventListener('keydown', function (ev) {
+    if (gameScreen.classList.contains('hidden')) return;
+    if (ev.key === 'Backspace') { ev.preventDefault(); undo(); return; }
+    if (ev.key === 'Escape') { clearAll(); return; }
+    var k = ev.key.toLowerCase();
+    if (k.length === 1 && k >= 'a' && k <= 'z') typeLetter(k);
+  });
+
+  // hover blips (mouse only; harmless on touch)
+  ['startBtn', 'againBtn', 'undoBtn', 'clearBtn', 'hintBtn'].forEach(function (id) {
+    $(id).addEventListener('mouseenter', function () { SFX.play('hover'); });
+  });
+})();
+</script>
+</body>
+</html>

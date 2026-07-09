@@ -240,16 +240,44 @@
   Arcade.mount({ title: 'Cipher Crack', accent: '#60a5fa' });
 
   // ---- data: plaintext + the shift used to ENCRYPT it (computed in JS) -----
+  // 20 missions, difficulty rising: longer messages, varied shifts. On later
+  // missions the live preview stays scrambled until you turn CLOSE to the key
+  // (the "signal lock" window shrinks) — never impossible, just sharper.
   var MESSAGES = [
-    { text: 'WELL DONE AGENT',                          shift: 3  },
-    { text: 'CODES KEEP SECRETS SAFE',                  shift: 6  },
-    { text: 'COMPUTERS SPEAK IN ONES AND ZEROS',        shift: 8  },
-    { text: 'JULIUS CAESAR USED THIS CIPHER',           shift: 11 },
-    { text: 'A BYTE IS EIGHT BITS OF DATA',             shift: 14 },
-    { text: 'THE INTERNET SENDS ENCRYPTED MESSAGES',    shift: 17 },
-    { text: 'GREAT SPIES NEVER GIVE UP',                shift: 20 },
-    { text: 'MISSION COMPLETE STAY SHARP AGENT',        shift: 22 }
+    { text: 'WELL DONE AGENT',                                   shift: 3  },
+    { text: 'CODES KEEP SECRETS SAFE',                           shift: 5  },
+    { text: 'YOU ARE A CODE STAR',                               shift: 2  },
+    { text: 'BITS ARE ONES AND ZEROS',                           shift: 7  },
+    { text: 'COMPUTERS THINK IN BINARY',                         shift: 9  },
+    { text: 'A BYTE IS EIGHT TINY BITS',                         shift: 12 },
+    { text: 'JULIUS CAESAR USED THIS CIPHER',                    shift: 4  },
+    { text: 'ALGORITHMS SOLVE PROBLEMS STEP BY STEP',            shift: 15 },
+    { text: 'KEEP CALM AND KEEP ON CODING',                      shift: 6  },
+    { text: 'THE FIRST CODER WAS ADA LOVELACE',                  shift: 18 },
+    { text: 'LOOPS REPEAT UNTIL THE JOB IS DONE',                shift: 10 },
+    { text: 'EVERY BUG YOU FIX MAKES YOU STRONGER',              shift: 21 },
+    { text: 'THE INTERNET SENDS ENCRYPTED MESSAGES',            shift: 8  },
+    { text: 'A GOOD PASSWORD IS LONG AND SECRET',                shift: 23 },
+    { text: 'PIXELS ARE TINY DOTS THAT MAKE PICTURES',          shift: 13 },
+    { text: 'PRACTICE TURNS BEGINNERS INTO EXPERTS',            shift: 16 },
+    { text: 'FUNCTIONS ARE REUSABLE BLOCKS OF CODE',            shift: 25 },
+    { text: 'BRAVE MINDS ASK QUESTIONS AND EXPLORE',            shift: 19 },
+    { text: 'DATA TRAVELS THE WORLD AT THE SPEED OF LIGHT',     shift: 17 },
+    { text: 'MISSION COMPLETE STAY CURIOUS AND KEEP CRACKING CODES', shift: 22 }
   ];
+  // how tight the "signal lock" window is on each mission (how close your shift
+  // must be for the live decode to appear). Wider = easier; shrinks over time.
+  function maskDist(i) {
+    if (i < 8)  return 26;   // missions 1-8:  preview always visible (easy)
+    if (i < 14) return 4;    // missions 9-14: reveal within 4 of the key
+    if (i < 19) return 2;    // missions 15-19: reveal within 2
+    return 1;                // mission 20: only the exact key reveals it
+  }
+  // circular distance between two shifts (0-25)
+  function circDist(a, b) {
+    var d = ((a - b) % 26 + 26) % 26;
+    return Math.min(d, 26 - d);
+  }
 
   var A = 'A'.charCodeAt(0);
   // shift a single string of letters by n (wraps, leaves non-letters alone)

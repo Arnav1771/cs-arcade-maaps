@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Number Ninja</title>
+<style>
+  :root {
+    --accent: #f97316;
+    --accent2: #fbbf24;
+    --ink: #fff7ed;
+    --muted: #fdba74;
+    --card: rgba(28, 16, 8, .60);
+    --line: rgba(255, 255, 255, .12);
+    --good: #22c55e;
+    --bad: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    min-height: 100%;
+    padding: 64px 16px 28px;
+    /* dojo-at-dusk backdrop */
+    background:
+      radial-gradient(1000px 700px at 12% -8%, rgba(249, 115, 22, .34), transparent 58%),
+      radial-gradient(900px 650px at 100% 8%, rgba(251, 191, 36, .20), transparent 55%),
+      radial-gradient(1000px 800px at 50% 118%, rgba(190, 24, 24, .28), transparent 58%),
+      #140a04;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: 22px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .45);
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: clamp(32px, 9vw, 52px);
+    letter-spacing: -1px;
+    background: linear-gradient(90deg, #fff, var(--accent));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tag { color: var(--accent); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; font-size: 12px; }
+  p.lede { color: var(--muted); line-height: 1.55; margin: 10px 0; }
+  .explain {
+    background: rgba(0, 0, 0, .30);
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 14px; line-height: 1.7; color: var(--muted);
+  }
+  .explain b { color: var(--ink); }
+
+  button.btn {
+    width: 100%; cursor: pointer; border: none; border-radius: 16px;
+    padding: 16px; font-size: 18px; font-weight: 800; color: #1a0d04;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    box-shadow: 0 12px 30px rgba(249, 115, 22, .4); transition: .15s;
+    margin-top: 8px;
+  }
+  button.btn:hover { filter: brightness(1.08); }
+  button.btn:active { transform: translateY(2px); }
+
+  /* HUD */
+  .hud { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .stat { background: rgba(0, 0, 0, .32); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; text-align: center; flex: 1 1 auto; min-width: 62px; }
+  .stat b { display: block; font-size: 20px; }
+  .stat span { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  #hLives { letter-spacing: 1px; }
+
+  .progwrap { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+  .progbar { flex: 1; height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; }
+  .progbar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--good), #86efac); transition: width .25s; }
+
+  .timerbar { height: 10px; border-radius: 99px; background: rgba(255, 255, 255, .12); overflow: hidden; margin-bottom: 16px; }
+  .timerbar > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+  .problem {
+    text-align: center; font-weight: 900; letter-spacing: 1px;
+    font-size: clamp(38px, 13vw, 66px); margin: 6px 0 6px;
+    text-shadow: 0 4px 18px rgba(249,115,22,.35);
+  }
+  .combo { text-align: center; font-weight: 800; color: var(--accent2); min-height: 20px; font-size: 15px; }
+
+  .orbs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 4px; }
+  .orbs.three { grid-template-columns: 1fr 1fr 1fr; }
+  .orb {
+    position: relative; cursor: pointer; user-select: none;
+    aspect-ratio: 1 / 1; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: clamp(26px, 8vw, 38px); font-weight: 900; color: #fff;
+    border: 3px solid rgba(255,255,255,.25);
+    background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.35), rgba(0,0,0,.25) 70%), var(--oc, #ea580c);
+    box-shadow: 0 12px 26px rgba(0,0,0,.4), inset 0 -8px 18px rgba(0,0,0,.35);
+    transition: transform .1s, box-shadow .15s, opacity .2s;
+  }
+  .orb .fruit { font-size: 20px; margin-bottom: -4px; }
+  .orb:active { transform: scale(.94); }
+  .orb.locked { pointer-events: none; }
+  .orb.hit { animation: pop .35s ease-out; border-color: var(--good); box-shadow: 0 0 0 4px rgba(34,197,94,.55); }
+  .orb.miss { animation: shake .35s; border-color: var(--bad); box-shadow: 0 0 0 4px rgba(239,68,68,.55); }
+  .orb.faded { opacity: .28; }
+  .orb .slash { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 40px; opacity: 0; }
+  .orb.hit .slash, .orb.miss .slash { opacity: 1; }
+  @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.18)} 100%{transform:scale(1.06)} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(7px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+
+  .feedback { text-align: center; min-height: 22px; margin-top: 10px; font-weight: 800; }
+  .hidden { display: none !important; }
+
+  .big-score { font-size: 58px; font-weight: 900; text-align: center; margin: 4px 0; }
+  .verdict { text-align: center; font-size: 22px; font-weight: 900; margin-bottom: 6px; }
+  .result-row { display: flex; gap: 10px; margin: 14px 0; }
+  .result-row .stat b { font-size: 22px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ START ============ -->
+  <section id="startScreen" class="card">
+    <div class="tag">🥷 Maths Dojo</div>
+    <h1>Number Ninja</h1>
+    <p class="lede">A maths problem flashes on screen. Three or four answer <b>orbs</b> drift up — <b>slash the correct one</b> before the timer runs out!</p>
+    <div class="explain">
+      <b>How to play:</b> tap the orb with the right answer.<br>
+      ✅ Right answer = points + a growing <b>combo</b> multiplier.<br>
+      ❌ Wrong answer (or too slow) = lose one of your <b>3 lives</b>.<br>
+      Clear <b>5</b> problems to climb a level. Survive all <b>20 levels</b> to become a Grandmaster Ninja!<br>
+      <span style="color:var(--ink)">The skill: <b>fast, accurate mental maths</b> — add, subtract, times-tables and division.</span>
+    </div>
+    <button class="btn" id="startBtn">▶ Enter the Dojo</button>
+    <p class="lede" style="text-align:center;margin-bottom:0;font-size:13px">20 levels • Best score: <b id="bestStart">0</b></p>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="gameScreen" class="card hidden">
+    <div class="hud">
+      <div class="stat"><b id="hLevel">1/20</b><span>Level</span></div>
+      <div class="stat"><b id="hScore">0</b><span>Score</span></div>
+      <div class="stat"><b id="hLives">❤❤❤</b><span>Lives</span></div>
+      <div class="stat"><b id="hBest">0</b><span>Best</span></div>
+    </div>
+    <div class="progwrap"><span>Level goal</span><div class="progbar"><i id="progFill"></i></div><span id="progTxt">0/5</span></div>
+    <div class="timerbar"><i id="timerFill"></i></div>
+    <div class="combo" id="combo">&nbsp;</div>
+    <div class="problem" id="problem">7 × 6 = ?</div>
+    <div class="orbs" id="orbs"></div>
+    <div class="feedback" id="feedback">&nbsp;</div>
+  </section>
+
+  <!-- ============ RESULT ============ -->
+  <section id="resultScreen" class="card hidden">
+    <div class="tag" style="text-align:center">Dojo Results</div>
+    <div class="verdict" id="verdict">Nice slicing!</div>
+    <div class="big-score" id="finalScore">0</div>
+    <div class="result-row">
+      <div class="stat"><b id="rLevel">1</b><span>Reached Level</span></div>
+      <div class="stat"><b id="rCorrect">0</b><span>Correct</span></div>
+      <div class="stat"><b id="rBest">0</b><span>Best</span></div>
+    </div>
+    <button class="btn" id="againBtn">↻ Play Again</button>
+  </section>
+
+</div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SLUG = 'number-ninja';
+  Arcade.mount({ title: 'Number Ninja', accent: '#f97316' });
+
+  var $ = function (id) { return document.getElementById(id); };
+  function rnd(max) { return Math.floor(Math.random() * max); }
+  function pick(a) { return a[rnd(a.length)]; }
+  function shuffle(a) { for (var i=a.length-1;i>0;i--){var j=rnd(i+1),t=a[i];a[i]=a[j];a[j]=t;} return a; }
+
+  var FRUIT = ['🍉','🍊','🍎','🍇','🍋','🥝','🍓','🍑','🫐','🍈'];
+  var ORBCOL = ['#ea580c','#dc2626','#d97706','#16a34a','#7c3aed','#0891b2','#db2777','#65a30d'];
+
+  var TOTAL_LEVELS = 20;
+  var GOAL = 5;              // correct answers to clear a level
+
+  // ---------- problem generator by level ----------
+  // Returns { text: '7 × 6', answer: 42 }
+  function genProblem(level) {
+    var a, b, ans, text;
+    if (level <= 5) {
+      // small addition & subtraction (subtraction appears from L2)
+      var max = 4 + level * 3;                 // L1:7 .. L5:19
+      var sub = level >= 2 && Math.random() < 0.45;
+      a = 1 + rnd(max); b = 1 + rnd(max);
+      if (sub) { if (b > a) { var t = a; a = b; b = t; } ans = a - b; text = a + ' − ' + b; }
+      else { ans = a + b; text = a + ' + ' + b; }
+    } else if (level <= 10) {
+      // bigger add / subtract (two-digit, growing)
+      var hi = 20 + (level - 6) * 18;           // L6:20 .. L10:92
+      var sub2 = Math.random() < 0.5;
+      a = 8 + rnd(hi); b = 5 + rnd(hi);
+      if (sub2) { if (b > a) { var t2 = a; a = b; b = t2; } ans = a - b; text = a + ' − ' + b; }
+      else { ans = a + b; text = a + ' + ' + b; }
+    } else if (level <= 15) {
+      // multiplication tables (grows toward 12×12)
+      var thi = 6 + (level - 11) * 2;           // L11:6 .. L15:14 (capped 12)
+      if (thi > 12) thi = 12;
+      a = 2 + rnd(thi); b = 2 + rnd(11);
+      ans = a * b; text = a + ' × ' + b;
+    } else {
+      // mixed: +, −, ×, ÷ with larger numbers, faster
+      var kind = pick(['×', '÷', '+', '−', '×', '÷']);
+      if (kind === '÷') {
+        b = 2 + rnd(11); ans = 2 + rnd(12); a = b * ans; text = a + ' ÷ ' + b;
+      } else if (kind === '×') {
+        a = 3 + rnd(10); b = 4 + rnd(9); ans = a * b; text = a + ' × ' + b;
+      } else if (kind === '−') {
+        a = 40 + rnd(120); b = 10 + rnd(90); if (b > a){var t3=a;a=b;b=t3;} ans = a - b; text = a + ' − ' + b;
+      } else {
+        a = 30 + rnd(140); b = 20 + rnd(120); ans = a + b; text = a + ' + ' + b;
+      }
+    }
+    return { text: text, answer: ans };
+  }
+
+  // distinct plausible distractors near the answer
+  function makeOptions(answer, level) {
+    var count = level <= 3 ? 3 : 4;
+    var opts = [answer];
+    var spread = Math.max(2, Math.round(answer * 0.18)) + 3;
+    var guard = 0;
+    while (opts.length < count && guard++ < 300) {
+      var off = 1 + rnd(spread);
+      if (Math.random() < 0.5) off = -off;
+      var v = answer + off;
+      if (v < 0) v = answer + Math.abs(off);
+      if (v === answer) continue;
+      if (opts.indexOf(v) !== -1) continue;
+      opts.push(v);
+    }
+    while (opts.length < count) { var f = answer + opts.length; if (opts.indexOf(f) === -1) opts.push(f); }
+    return shuffle(opts);
+  }
+
+  function levelTime(level) {
+    // shrinks steadily: L1 ~7.0s .. L20 ~2.6s
+    return Math.max(2600, 7000 - (level - 1) * 230);
+  }
+
+  // ---------- state ----------
+  var startScreen = $('startScreen'), gameScreen = $('gameScreen'), resultScreen = $('resultScreen');
+  var orbsEl = $('orbs'), problemEl = $('problem'), feedback = $('feedback'), comboEl = $('combo');
+  var timerFill = $('timerFill'), progFill = $('progFill'), progTxt = $('progTxt');
+  var state, timerId = null, curAnswer = null, curDur = 0;
+
+  function show(elm) { [startScreen, gameScreen, resultScreen].forEach(function (s){ s.classList.add('hidden'); }); elm.classList.remove('hidden'); }
+
+  $('bestStart').textContent = Arcade.best(SLUG);
+
+  function startGame() {
+    SFX.play('start');
+    state = { level: 1, score: 0, lives: 3, streak: 0, cleared: 0, correctTotal: 0 };
+    $('hBest').textContent = Arcade.best(SLUG);
+    show(gameScreen);
+    updateHud();
+    nextProblem();
+  }
+
+  function updateHud() {
+    $('hLevel').textContent = state.level + '/' + TOTAL_LEVELS;
+    $('hScore').textContent = state.score;
+    $('hLives').textContent = '❤'.repeat(state.lives) + '<span style="opacity:.25">'.length ? '❤'.repeat(state.lives) : '';
+    $('hLives').innerHTML = '<span style="color:#f87171">' + '❤'.repeat(state.lives) + '</span>' + '<span style="opacity:.2">' + '❤'.repeat(3 - state.lives) + '</span>';
+    $('hBest').textContent = Arcade.best(SLUG);
+    progFill.style.width = (state.cleared / GOAL * 100) + '%';
+    progTxt.textContent = state.cleared + '/' + GOAL;
+  }
+
+  function nextProblem() {
+    clearTimer();
+    var p = genProblem(state.level);
+    curAnswer = p.answer;
+    problemEl.textContent = p.text + ' = ?';
+    feedback.innerHTML = '&nbsp;';
+    comboEl.innerHTML = state.streak >= 2 ? ('🔥 Combo ×' + comboMult() + '  (' + state.streak + ' in a row)') : '&nbsp;';
+
+    var opts = makeOptions(p.answer, state.level);
+    orbsEl.className = 'orbs' + (opts.length === 3 ? ' three' : '');
+    orbsEl.innerHTML = '';
+    var fruits = shuffle(FRUIT.slice());
+    var cols = shuffle(ORBCOL.slice());
+    opts.forEach(function (v, i) {
+      var o = document.createElement('div');
+      o.className = 'orb';
+      o.style.setProperty('--oc', cols[i % cols.length]);
+      o.innerHTML = '<span class="fruit">' + fruits[i % fruits.length] + '</span>' + v +
+                    '<span class="slash">' + (v === p.answer ? '✅' : '❌') + '</span>';
+      o.addEventListener('click', function () { choose(o, v === p.answer); });
+      orbsEl.appendChild(o);
+    });
+
+    startTimer(levelTime(state.level));
+  }
+
+  function comboMult() { return Math.min(5, 1 + Math.floor(state.streak / 2)); }
+
+  function lockOrbs() { Array.prototype.forEach.call(orbsEl.children, function (o){ o.classList.add('locked'); }); }
+  function revealCorrect() {
+    Array.prototype.forEach.call(orbsEl.children, function (o) {
+      if (o.querySelector('.slash').textContent === '✅' && !o.classList.contains('hit')) {
+        o.classList.add('hit');
+      } else if (!o.classList.contains('hit') && !o.classList.contains('miss')) {
+        o.classList.add('faded');
+      }
+    });
+  }
+
+  function choose(orb, correct) {
+    clearTimer();
+    lockOrbs();
+    if (correct) {
+      orb.classList.add('hit');
+      state.streak++;
+      var mult = comboMult();
+      var gain = (6 + state.level * 3) * mult;
+      state.score += gain;
+      state.cleared++;
+      state.correctTotal++;
+      SFX.play('correct');
+      setTimeout(function () { SFX.play('coin'); }, 110);
+      feedback.style.color = 'var(--good)';
+      feedback.textContent = '✓ Sliced! +' + gain + (mult > 1 ? '  (×' + mult + ' combo)' : '');
+      revealCorrect();
+      updateHud();
+      if (state.cleared >= GOAL) { setTimeout(levelUp, 700); }
+      else { setTimeout(nextProblem, 650); }
+    } else {
+      orb.classList.add('miss');
+      state.streak = 0;
+      state.lives--;
+      SFX.play('wrong');
+      setTimeout(function () { SFX.play('error'); }, 90);
+      revealCorrect();
+      feedback.style.color = 'var(--bad)';
+      feedback.textContent = '✕ Missed! (answer was ' + curAnswer + ')  −1 life';
+      updateHud();
+      if (state.lives <= 0) { setTimeout(function(){ gameOver(false); }, 1100); }
+      else { setTimeout(nextProblem, 1100); }
+    }
+  }
+
+  function timeout() {
+    clearTimer();
+    lockOrbs();
+    state.streak = 0;
+    state.lives--;
+    SFX.play('error');
+    revealCorrect();
+    feedback.style.color = 'var(--accent2)';
+    feedback.textContent = "⏱ Too slow! (answer was " + curAnswer + ")  −1 life";
+    updateHud();
+    if (state.lives <= 0) { setTimeout(function(){ gameOver(false); }, 1100); }
+    else { setTimeout(nextProblem, 1100); }
+  }
+
+  function levelUp() {
+    if (state.level >= TOTAL_LEVELS) { return gameOver(true); }
+    state.level++;
+    state.cleared = 0;
+    SFX.play('powerup');
+    setTimeout(function () { SFX.play('win'); }, 120);
+    feedback.style.color = 'var(--accent2)';
+    feedback.textContent = '⬆ Level ' + state.level + '! The dojo speeds up…';
+    updateHud();
+    setTimeout(nextProblem, 950);
+  }
+
+  // ---------- timer ----------
+  function startTimer(dur) {
+    curDur = dur;
+    var t0 = performance.now();
+    timerFill.style.width = '100%';
+    timerId = setInterval(function () {
+      var left = dur - (performance.now() - t0);
+      if (left <= 0) { clearTimer(); timeout(); return; }
+      timerFill.style.width = (left / dur * 100) + '%';
+      if (left < 1600 && Math.floor(left / 200) % 2 === 0) SFX.play('tick');
+    }, 90);
+  }
+  function clearTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+
+  // ---------- game over ----------
+  function gameOver(won) {
+    clearTimer();
+    Arcade.best(SLUG, state.score);            // save best + feed leaderboard, once
+    $('finalScore').textContent = state.score;
+    $('rLevel').textContent = state.level;
+    $('rCorrect').textContent = state.correctTotal;
+    $('rBest').textContent = Arcade.best(SLUG);
+    if (won) {
+      $('verdict').textContent = '🏆 Grandmaster Ninja! All 20 levels cleared!';
+      SFX.play('fanfare');
+      Arcade.confetti();
+    } else {
+      $('verdict').textContent = state.level >= 15 ? '🥷 Ninja Master — so close!'
+                    : (state.level >= 8 ? '⚔ Sharp blade! Keep training.' : 'Back to the dojo — you got this!');
+      SFX.play('lose');
+    }
+    show(resultScreen);
+  }
+
+  $('startBtn').addEventListener('click', startGame);
+  $('againBtn').addEventListener('click', function () { SFX.play('click'); show(startScreen); $('bestStart').textContent = Arcade.best(SLUG); });
+
+})();
+</script>
+</body>
+</html>

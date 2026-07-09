@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pattern Quest</title>
+<style>
+  :root{ --cy:#06b6d4; --cy2:#22d3ee; --bg0:#03121a; --bg1:#071c28; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:#e0f7fe; min-height:100%;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(6,182,212,.16), transparent 42%),
+      radial-gradient(circle at 85% 85%, rgba(34,211,238,.12), transparent 46%),
+      linear-gradient(160deg, var(--bg0), var(--bg1) 62%, #020b10);
+    background-attachment:fixed;
+    padding:64px 14px 40px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  /* faint circuit grid */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
+    background-image:
+      linear-gradient(rgba(6,182,212,.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(6,182,212,.07) 1px, transparent 1px);
+    background-size:34px 34px;
+  }
+  .wrap{ width:100%; max-width:640px; }
+  h1{ display:none; }
+
+  /* ---- HUD ---- */
+  .hud{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    background:rgba(3,18,26,.72); border:1px solid rgba(6,182,212,.32);
+    border-radius:16px; padding:10px 16px; margin-bottom:12px;
+  }
+  .hud .lv{ font-weight:800; color:var(--cy2); letter-spacing:.5px; font-size:15px; }
+  .stat{ font-size:13px; color:#88c7db; }
+  .stat b{ color:#fff; font-size:15px; }
+  .subhud{
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; margin-bottom:12px; padding:0 4px;
+  }
+  .lives{ font-size:16px; letter-spacing:2px; }
+  .streak{ font-size:13px; color:#88c7db; }
+  .streak b{ color:var(--cy2); }
+  .dots{ display:flex; gap:6px; }
+  .dot{ width:12px; height:12px; border-radius:50%; border:1.5px solid var(--cy); background:transparent; transition:.2s; }
+  .dot.done{ background:var(--cy); box-shadow:0 0 10px var(--cy); }
+
+  /* ---- card ---- */
+  .card{
+    background:rgba(3,18,26,.72); border:1px solid rgba(6,182,212,.26);
+    border-radius:18px; padding:16px 14px; box-shadow:0 12px 34px rgba(0,0,0,.4);
+  }
+  .kind{
+    text-align:center; letter-spacing:2px; text-transform:uppercase;
+    color:#7fb9cc; font-size:12px; font-weight:700; margin-bottom:4px;
+  }
+  .ask{ text-align:center; font-size:clamp(15px,3.8vw,18px); font-weight:700; color:#cfeffb; margin-bottom:12px; }
+  .ask b{ color:var(--cy2); }
+
+  /* timer bar */
+  .tbar{ height:8px; border-radius:6px; background:rgba(6,182,212,.14); overflow:hidden; margin-bottom:16px; }
+  .tfill{ height:100%; width:100%; background:linear-gradient(90deg,var(--cy),var(--cy2)); box-shadow:0 0 12px var(--cy); }
+
+  /* sequence */
+  .seqrow{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:18px; }
+  .cell{
+    width:clamp(46px,13vw,66px); height:clamp(46px,13vw,66px);
+    display:flex; align-items:center; justify-content:center;
+    border-radius:14px; background:rgba(2,12,18,.85);
+    border:1px solid rgba(6,182,212,.28); overflow:hidden;
+  }
+  .cell .sym{ font-size:2.2rem; line-height:1; font-weight:800; }
+  .cell .sym.num{ font-size:1.7rem; color:var(--cy2); text-shadow:0 0 12px var(--cy); font-variant-numeric:tabular-nums; }
+  .cell.q{
+    color:var(--cy2); font-size:1.9rem; font-weight:900;
+    border:2px dashed var(--cy2); background:rgba(6,182,212,.08);
+    box-shadow:0 0 16px rgba(6,182,212,.35) inset; animation:pulse 1.2s infinite;
+  }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 16px rgba(6,182,212,.3) inset; } 50%{ box-shadow:0 0 26px rgba(6,182,212,.6) inset; } }
+
+  /* options */
+  .opts{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  @media(min-width:520px){ .opts{ grid-template-columns:repeat(4,1fr); } }
+  .opt{
+    cursor:pointer; border:1px solid rgba(6,182,212,.35); background:rgba(3,18,26,.9);
+    border-radius:14px; padding:14px 6px; display:flex; align-items:center; justify-content:center;
+    min-height:74px; transition:transform .1s, border-color .15s, box-shadow .15s; color:#e0f7fe;
+  }
+  .opt .sym{ font-size:2rem; line-height:1; font-weight:800; }
+  .opt .sym.num{ font-size:1.6rem; color:var(--cy2); text-shadow:0 0 12px var(--cy); font-variant-numeric:tabular-nums; }
+  .opt:hover{ transform:translateY(-2px); border-color:var(--cy2); box-shadow:0 0 16px rgba(6,182,212,.35); }
+  .opt:active{ transform:translateY(0); }
+  .opt.right{ border-color:#34d399; box-shadow:0 0 18px rgba(52,211,153,.6); background:rgba(52,211,153,.12); }
+  .opt.wrongpick{ border-color:#f43f5e; box-shadow:0 0 18px rgba(244,63,94,.5); background:rgba(244,63,94,.12); }
+  .opt[disabled]{ cursor:default; }
+
+  .msg{ text-align:center; margin-top:14px; min-height:24px; font-weight:800; font-size:16px; }
+  .msg.good{ color:#34d399; } .msg.bad{ color:#fb7185; }
+
+  /* overlays */
+  .overlay{
+    position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center;
+    padding:20px; background:rgba(2,8,12,.88); backdrop-filter:blur(4px);
+  }
+  .overlay .panel{ max-width:460px; text-align:center; }
+  .panel .big{ font-size:clamp(28px,8vw,44px); font-weight:900; color:var(--cy2); text-shadow:0 0 22px rgba(6,182,212,.55); margin-bottom:6px; }
+  .panel p{ color:#b6ddea; line-height:1.55; margin:10px 0; font-size:15px; }
+  .panel .concept{ background:rgba(6,182,212,.1); border:1px solid rgba(6,182,212,.3); border-radius:12px; padding:12px; font-size:14px; color:#cfeffb; }
+  .howto{ text-align:left; font-size:14px; color:#b6ddea; margin:14px auto; max-width:360px; }
+  .howto li{ margin:7px 0; list-style:none; }
+  .btnrow{ text-align:center; margin-top:14px; }
+  button.act{
+    font:inherit; font-weight:800; cursor:pointer; color:#03121a; background:var(--cy);
+    border:none; border-radius:999px; padding:13px 28px; font-size:16px;
+    box-shadow:0 6px 20px rgba(6,182,212,.4); transition:transform .1s;
+  }
+  button.act:hover{ transform:translateY(-2px); }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <span class="lv" id="lv">Level 1 / 20</span>
+      <span class="stat">Score <b id="score">0</b></span>
+      <span class="stat">Best <b id="best">0</b></span>
+    </div>
+    <div class="subhud">
+      <span class="lives" id="lives">💠💠💠</span>
+      <span class="dots" id="dots"></span>
+      <span class="streak">Streak <b id="streak">0</b></span>
+    </div>
+
+    <div class="card">
+      <div class="kind" id="kind">Pattern</div>
+      <div class="ask">What comes next in place of the <b>❓</b>?</div>
+      <div class="tbar"><div class="tfill" id="tfill"></div></div>
+      <div class="seqrow" id="seqrow"></div>
+      <div class="opts" id="opts"></div>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+
+  <!-- START -->
+  <div class="overlay" id="startOv">
+    <div class="panel card">
+      <div class="big">Pattern Quest</div>
+      <div class="concept">Spotting patterns — working out the <b>rule</b> that decides what comes next — is the heart of how computers and coders think.</div>
+      <ul class="howto">
+        <li>🔍 Study the glowing sequence. One tile is a <b>❓</b>.</li>
+        <li>🧠 Find the rule — colour, shape, number or size.</li>
+        <li>👆 Tap the tile that comes next. Fast answers &amp; streaks score more!</li>
+      </ul>
+      <p style="font-size:13px">20 levels • 3 lives • clear each level to advance</p>
+      <div class="btnrow"><button class="act" id="startBtn">Start Quest ⚡</button></div>
+    </div>
+  </div>
+
+  <!-- LOSE -->
+  <div class="overlay hidden" id="loseOv">
+    <div class="panel card">
+      <div class="big">Out of Lives 💠</div>
+      <p>You reached <b id="loseLevel" style="color:#fff">Level 1</b>.</p>
+      <p>Score <b id="loseScore" style="color:#fff">0</b> &nbsp;•&nbsp; Best <b id="loseBest" style="color:#fff">0</b></p>
+      <p style="font-size:13px">Every pattern hides a rule — look for what repeats or grows!</p>
+      <div class="btnrow"><button class="act" id="loseAgain">Try Again ↻</button></div>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div class="overlay hidden" id="winOv">
+    <div class="panel card">
+      <div class="big">Pattern Master! 🏆</div>
+      <p>You cracked all <b>20 levels</b> — colours, numbers, sizes and tricky mixed rules. That's computational thinking in action!</p>
+      <p>Score <b id="winScore" style="color:#fff">0</b> &nbsp;•&nbsp; Best <b id="winBest" style="color:#fff">0</b></p>
+      <div class="btnrow"><button class="act" id="winAgain">Play Again ↻</button></div>
+    </div>
+  </div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function(){
+  'use strict';
+  var SLUG='pattern-quest';
+  Arcade.mount({ title:'Pattern Quest', accent:'#06b6d4' });
+
+  var $=function(id){ return document.getElementById(id); };
+  var PER_LEVEL=3;             // puzzles to clear a level
+  var COLORS=['#06b6d4','#f472b6','#a3e635','#fbbf24','#a855f7','#38bdf8'];
+  var GLYPHS=['●','■','▲','◆','★','⬢'];
+
+  // ---- tiny helpers ----
+  function rand(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
+  function choose(a){ return a[rand(0,a.length-1)]; }
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=rand(0,i); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function pickN(a,n){ return shuffle(a.slice()).slice(0,n); }
+
+  // ---- tile model ----
+  function shapeTile(g,c){ return {t:'shape', g:g, c:c}; }
+  function numTile(v){ return {t:'num', v:v}; }
+  function sizeTile(g,c,s){ return {t:'size', g:g, c:c, s:s}; }
+  function key(x){
+    if(x.t==='num') return 'n'+x.v;
+    if(x.t==='shape') return 's'+x.g+x.c;
+    return 'z'+x.g+x.c+x.s.toFixed(2);
+  }
+  function eq(a,b){ return key(a)===key(b); }
+
+  // Build a set of options that ALWAYS contains the answer, all distinct.
+  function buildOptions(ans, pool, n){
+    var out=[ans], seen={}; seen[key(ans)]=1;
+    shuffle(pool);
+    for(var i=0;i<pool.length && out.length<n;i++){
+      var k=key(pool[i]); if(!seen[k]){ seen[k]=1; out.push(pool[i]); }
+    }
+    return shuffle(out);
+  }
+  function numHints(ans, step){
+    var cand=[ans+step, ans-step, ans+1, ans-1, ans+2*step, Math.round(ans*1.5), ans+step+1];
+    var out=[]; cand.forEach(function(v){ if(v>0 && v!==ans) out.push(numTile(v)); });
+    return out;
+  }
+
+  // ============ PATTERN GENERATORS ============
+  // Each returns { seq:[tiles shown], ans:tile, opts:[tiles incl. answer], kind:'text' }
+
+  // L1-5: repeating colour / shape sequences (ABAB, ABCABC, AABAAB ...)
+  function genRepeat(level){
+    var cfgs={
+      1:{period:[0,1],       attr:'color', kind:'Repeating colours'},
+      2:{period:[0,1],       attr:'shape', kind:'Repeating shapes'},
+      3:{period:[0,1,2],     attr:'color', kind:'Repeating colours'},
+      4:{period:[0,0,1],     attr:'color', kind:'Repeating pattern'},
+      5:{period:[0,1,2,3],   attr:'shape', kind:'Repeating shapes'}
+    };
+    var cfg=cfgs[level], distinct=Math.max.apply(null,cfg.period)+1;
+    var pal = cfg.attr==='color' ? shuffle(COLORS.slice()) : shuffle(GLYPHS.slice());
+    var symbols=[];
+    for(var i=0;i<distinct;i++){
+      symbols.push(cfg.attr==='color' ? shapeTile('●',pal[i]) : shapeTile(pal[i],'#22d3ee'));
+    }
+    var reveal=Math.min(7, Math.max(5, cfg.period.length*2));
+    var seq=[]; for(var j=0;j<reveal;j++) seq.push(symbols[cfg.period[j%cfg.period.length]]);
+    var ans=symbols[cfg.period[reveal%cfg.period.length]];
+    var pool=symbols.filter(function(s){ return !eq(s,ans); });
+    for(var p=distinct;p<pal.length;p++) pool.push(cfg.attr==='color'?shapeTile('●',pal[p]):shapeTile(pal[p],'#22d3ee'));
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:cfg.kind };
+  }
+
+  // L6-10: number sequences (+k, x2, squares)
+  function genNumber(level){
+    var t=level-5, reveal=5, seq, ans, pool, kind='Number rule';
+    function arith(start,step){ var a=[]; for(var i=0;i<reveal;i++) a.push(numTile(start+step*i)); return { a:a, next:start+step*reveal }; }
+    if(t===1){ var r=arith(rand(1,4)*2, 2); seq=r.a; ans=numTile(r.next); pool=numHints(r.next,2); kind='Add 2 each time'; }
+    else if(t===2){ var r2=arith(rand(1,3)*3, 3); seq=r2.a; ans=numTile(r2.next); pool=numHints(r2.next,3); kind='Add 3 each time'; }
+    else if(t===3){ var st=rand(2,5); var r3=arith(st,5); seq=r3.a; ans=numTile(r3.next); pool=numHints(r3.next,5); kind='Add 5 each time'; }
+    else if(t===4){ var s0=rand(1,3), v=[]; for(var i=0;i<reveal;i++) v.push(numTile(s0*Math.pow(2,i))); seq=v; ans=numTile(s0*Math.pow(2,reveal)); pool=numHints(ans.v,s0*Math.pow(2,reveal-1)); kind='Double each time'; }
+    else { var n0=rand(1,3), sq=[]; for(var k=0;k<reveal;k++) sq.push(numTile((n0+k)*(n0+k))); ans=numTile((n0+reveal)*(n0+reveal)); seq=sq; pool=numHints(ans.v, 2*(n0+reveal)+1); kind='Square numbers'; }
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:kind };
+  }
+
+  // L11-15: size growth & two-attribute patterns
+  function genSizeGrowth(base,step){
+    var g=choose(GLYPHS), c=choose(COLORS), reveal=4;
+    var seq=[]; for(var i=0;i<reveal;i++) seq.push(sizeTile(g,c,base+step*i));
+    var asc=base+step*reveal, ans=sizeTile(g,c,+asc.toFixed(2)), pool=[];
+    [step,-step,2*step,-2*step,3*step].forEach(function(d){
+      var s=+(asc+d).toFixed(2); if(s>=0.4 && Math.abs(s-asc)>0.02) pool.push(sizeTile(g,c,s));
+    });
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:'Growing size' };
+  }
+  function genTwoAttr(){ // colour cycle (2) + shape cycle (3)
+    var cols=pickN(COLORS,2), shps=pickN(GLYPHS,3), reveal=6;
+    function at(i){ return shapeTile(shps[i%3], cols[i%2]); }
+    var seq=[]; for(var i=0;i<reveal;i++) seq.push(at(i));
+    var ans=at(reveal);
+    var pool=[ shapeTile(shps[reveal%3], cols[(reveal+1)%2]),
+               shapeTile(shps[(reveal+1)%3], cols[reveal%2]),
+               shapeTile(shps[(reveal+2)%3], cols[(reveal+1)%2]),
+               at(reveal-1) ];
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:'Two rules at once' };
+  }
+  function genColorSize(){ // colour cycle (2) + growing size
+    var cols=pickN(COLORS,2), g=choose(GLYPHS), base=0.7, step=0.28, reveal=4;
+    function at(i){ return sizeTile(g, cols[i%2], +(base+step*i).toFixed(2)); }
+    var seq=[]; for(var i=0;i<reveal;i++) seq.push(at(i));
+    var ans=at(reveal), asc=+(base+step*reveal).toFixed(2);
+    var pool=[ sizeTile(g, cols[(reveal+1)%2], asc),
+               sizeTile(g, cols[reveal%2], +(asc+step).toFixed(2)),
+               sizeTile(g, cols[reveal%2], +(asc-step).toFixed(2)),
+               at(reveal-1) ];
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:'Colour + size' };
+  }
+  function genShapeSize(){ // shape cycle (2) + growing size
+    var shps=pickN(GLYPHS,2), c=choose(COLORS), base=0.7, step=0.3, reveal=4;
+    function at(i){ return sizeTile(shps[i%2], c, +(base+step*i).toFixed(2)); }
+    var seq=[]; for(var i=0;i<reveal;i++) seq.push(at(i));
+    var ans=at(reveal), asc=+(base+step*reveal).toFixed(2);
+    var pool=[ sizeTile(shps[(reveal+1)%2], c, asc),
+               sizeTile(shps[reveal%2], c, +(asc+step).toFixed(2)),
+               sizeTile(shps[reveal%2], c, +(asc-step).toFixed(2)),
+               at(reveal-1) ];
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:'Shape + size' };
+  }
+  function genSize(level){
+    var t=level-10;
+    if(t===1) return genSizeGrowth(0.6,0.28);
+    if(t===2) return genSizeGrowth(0.5,0.34);
+    if(t===3) return genTwoAttr();
+    if(t===4) return genColorSize();
+    return genShapeSize();
+  }
+
+  // L16-20: trickier mixed number rules
+  function genMixed(level){
+    var t=level-15, reveal=5, seq, ans, pool, kind='Mixed rule';
+    if(t===1){ // alternating add: +2,+3,+2,+3...
+      var d=[2,3], v=[rand(1,5)]; for(var i=1;i<=reveal;i++) v.push(v[i-1]+d[(i-1)%2]);
+      seq=v.slice(0,reveal).map(numTile); ans=numTile(v[reveal]);
+      pool=numHints(v[reveal],d[reveal%2]); pool.push(numTile(v[reveal-1]+d[(reveal)%2]));
+      kind='Alternating +2, +3';
+    } else if(t===2){ // increasing gaps: +1,+2,+3,+4...
+      var s=rand(1,4), w=[s]; for(var j=1;j<=reveal;j++) w.push(w[j-1]+j);
+      seq=w.slice(0,reveal).map(numTile); ans=numTile(w[reveal]);
+      pool=numHints(w[reveal],reveal); pool.push(numTile(w[reveal-1]+(reveal-1)));
+      kind='Growing gaps +1,+2,+3…';
+    } else if(t===3){ // Fibonacci-like: each = sum of previous two
+      var a=rand(1,4), b=rand(a+1,a+4), f=[a,b]; for(var k=2;k<=reveal;k++) f.push(f[k-1]+f[k-2]);
+      seq=f.slice(0,reveal).map(numTile); ans=numTile(f[reveal]);
+      pool=numHints(f[reveal],f[reveal-2]); pool.push(numTile(f[reveal-1]*2));
+      kind='Add the last two';
+    } else if(t===4){ // alternate x2 then +1
+      var st=rand(1,4), q=[st]; for(var m=1;m<=reveal;m++) q.push((m%2===1)? q[m-1]*2 : q[m-1]+1);
+      seq=q.slice(0,reveal).map(numTile); ans=numTile(q[reveal]);
+      var alt=(reveal%2===1)? q[reveal-1]+1 : q[reveal-1]*2;   // the wrong-op tempter
+      pool=numHints(q[reveal],2); pool.push(numTile(alt));
+      kind='Double, then +1, repeat';
+    } else { // two interleaved sequences
+      var sa=rand(1,3), da=2, sb=rand(10,14), db=10, reveal6=6, iv=[];
+      for(var p=0;p<reveal6;p++) iv.push((p%2===0)? sa+da*(p/2) : sb+db*((p-1)/2));
+      var nx=sa+da*(reveal6/2);                                // next is an even slot
+      seq=iv.map(numTile); ans=numTile(nx); reveal=reveal6;
+      pool=numHints(nx,da); pool.push(numTile(sb+db*(reveal6/2)));
+      kind='Two woven sequences';
+    }
+    return { seq:seq, ans:ans, opts:buildOptions(ans,pool,4), kind:kind };
+  }
+
+  // ---- dispatch + validation (guarantees exactly one correct answer, in options) ----
+  function valid(p){
+    if(!p||!p.opts||!p.ans) return false;
+    var seen={}, found=false;
+    for(var i=0;i<p.opts.length;i++){
+      var k=key(p.opts[i]); if(seen[k]) return false; seen[k]=1;
+      if(eq(p.opts[i],p.ans)) found=true;
+    }
+    return found && p.opts.length>=3 && p.opts.length<=4;
+  }
+  function makePuzzle(level){
+    var p, tries=0;
+    do {
+      if(level<=5) p=genRepeat(level);
+      else if(level<=10) p=genNumber(level);
+      else if(level<=15) p=genSize(level);
+      else p=genMixed(level);
+      tries++;
+    } while(!valid(p) && tries<25);
+    return valid(p)? p : genRepeat(1);
+  }
+
+  // ---- rendering ----
+  function symSpan(x){
+    var s=document.createElement('span'); s.className='sym';
+    if(x.t==='num'){ s.className+=' num'; s.textContent=x.v; }
+    else { s.textContent=x.g; s.style.color=x.c; s.style.textShadow='0 0 14px '+x.c;
+           if(x.t==='size') s.style.fontSize=(x.s*2.2).toFixed(2)+'rem'; }
+    return s;
+  }
+  function renderSeq(p){
+    var row=$('seqrow'); row.innerHTML='';
+    p.seq.forEach(function(x){ var d=document.createElement('div'); d.className='cell'; d.appendChild(symSpan(x)); row.appendChild(d); });
+    var q=document.createElement('div'); q.className='cell q'; q.textContent='❓'; row.appendChild(q);
+  }
+  function renderOpts(p){
+    var box=$('opts'); box.innerHTML='';
+    p.opts.forEach(function(x){
+      var b=document.createElement('button'); b.className='opt'; b.setAttribute('data-key',key(x));
+      b.appendChild(symSpan(x));
+      b.addEventListener('click', function(){ pick(x,b); });
+      b.addEventListener('mouseenter', function(){ if(!busy) SFX.play('hover'); });
+      box.appendChild(b);
+    });
+  }
+  function renderDots(){
+    var d=$('dots'); d.innerHTML='';
+    for(var i=0;i<PER_LEVEL;i++){ var s=document.createElement('span'); s.className='dot'+(i<solved?' done':''); d.appendChild(s); }
+  }
+
+  // ---- game state ----
+  var level=1, score=0, lives=3, streak=0, solved=0, cur=null, busy=false;
+  var timerTO=null, qStart=0, qDur=0;
+  $('best').textContent=Arcade.best(SLUG);
+
+  function levelSecs(){ return Math.max(6, 16 - level*0.4); }
+  function startTimer(){
+    var secs=levelSecs(), f=$('tfill');
+    qStart=Date.now(); qDur=secs*1000;
+    f.style.transition='none'; f.style.width='100%'; void f.offsetWidth;
+    f.style.transition='width '+secs+'s linear'; f.style.width='0%';
+    timerTO=setTimeout(timeUp, qDur);
+  }
+  function stopTimer(){
+    if(timerTO){ clearTimeout(timerTO); timerTO=null; }
+    var f=$('tfill'); f.style.transition='none';
+  }
+
+  function loadPuzzle(){
+    busy=false; cur=makePuzzle(level);
+    $('kind').textContent=cur.kind;
+    $('lv').textContent='Level '+level+' / 20';
+    $('msg').textContent=''; $('msg').className='msg';
+    renderDots(); renderSeq(cur); renderOpts(cur);
+    startTimer();
+  }
+
+  function pick(tile, btn){
+    if(busy) return; busy=true; stopTimer();
+    if(eq(tile,cur.ans)) correct(btn);
+    else wrong(btn,false);
+  }
+  function timeUp(){
+    if(busy) return; busy=true; stopTimer();
+    wrong(null,true);
+  }
+
+  function correct(btn){
+    SFX.play('correct'); setTimeout(function(){ SFX.play('coin'); },110);
+    btn.classList.add('right');
+    streak++;
+    var remain=Math.max(0, qDur-(Date.now()-qStart));
+    var timeBonus=Math.round(10*remain/qDur);
+    var gain=10 + level*2 + streak + timeBonus;
+    score+=gain;
+    $('score').textContent=score; $('streak').textContent=streak;
+    $('msg').textContent='✅ +'+gain+(streak>1?'  🔥'+streak:''); $('msg').className='msg good';
+    solved++; renderDots();
+    setTimeout(function(){
+      if(solved>=PER_LEVEL) advanceLevel(); else loadPuzzle();
+    }, 750);
+  }
+
+  function wrong(btn, timedOut){
+    SFX.play('wrong'); setTimeout(function(){ SFX.play('error'); },90);
+    if(btn) btn.classList.add('wrongpick');
+    // reveal the right one briefly
+    var right=document.querySelector('.opt[data-key="'+CSS.escape(key(cur.ans))+'"]');
+    if(right) right.classList.add('right');
+    streak=0; $('streak').textContent=0;
+    lives--; paintLives();
+    $('msg').textContent=timedOut? '⏰ Time up! That was the answer' : '❌ The glowing tile was next';
+    $('msg').className='msg bad';
+    setTimeout(function(){
+      if(lives<=0) endGame(false); else loadPuzzle();
+    }, 1150);
+  }
+  function paintLives(){
+    var s=''; for(var i=0;i<3;i++) s+= i<lives ? '💠' : '▫️';
+    $('lives').textContent=s;
+  }
+
+  function advanceLevel(){
+    SFX.play('powerup'); setTimeout(function(){ SFX.play('win'); },130);
+    if(level>=20){ endGame(true); return; }
+    level++; solved=0;
+    SFX.play('whoosh');
+    loadPuzzle();
+  }
+
+  function endGame(won){
+    stopTimer();
+    Arcade.best(SLUG, score);          // save device-best + feed leaderboard (once)
+    var best=Arcade.best(SLUG);
+    $('best').textContent=best;
+    if(won){
+      $('winScore').textContent=score; $('winBest').textContent=best;
+      $('winOv').classList.remove('hidden');
+      SFX.play('win'); setTimeout(function(){ SFX.play('fanfare'); },260);
+      Arcade.confetti();
+    } else {
+      $('loseLevel').textContent='Level '+level; $('loseScore').textContent=score; $('loseBest').textContent=best;
+      $('loseOv').classList.remove('hidden');
+      SFX.play('lose');
+    }
+  }
+
+  function startGame(){
+    SFX.play('start');
+    level=1; score=0; lives=3; streak=0; solved=0;
+    $('score').textContent=0; $('streak').textContent=0; paintLives();
+    $('startOv').classList.add('hidden');
+    $('loseOv').classList.add('hidden');
+    $('winOv').classList.add('hidden');
+    loadPuzzle();
+  }
+
+  $('startBtn').addEventListener('click', startGame);
+  $('loseAgain').addEventListener('click', function(){ SFX.play('click'); startGame(); });
+  $('winAgain').addEventListener('click', function(){ SFX.play('click'); startGame(); });
+
+  // preview behind the start overlay
+  paintLives(); level=1; solved=0; cur=makePuzzle(1); renderDots(); renderSeq(cur); renderOpts(cur);
+})();
+</script>
+</body>
+</html>

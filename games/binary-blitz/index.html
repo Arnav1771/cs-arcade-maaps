@@ -95,7 +95,9 @@
   .stat b { color: var(--ink); font-size: 18px; }
   .lives { font-size: 18px; letter-spacing: 2px; }
 
-  .timerbar { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-bottom: 18px; border: 1px solid rgba(56,189,248,0.2); }
+  .timerbar { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-bottom: 12px; border: 1px solid rgba(56,189,248,0.2); }
+  .lvlprog { text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-bottom: 16px; }
+  .lvlprog b { color: var(--accent); }
   .timerfill { height: 100%; width: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #a5f3fc); transition: width 0.12s linear; }
   .timerfill.low { background: linear-gradient(90deg, #f43f5e, #fb923c); }
 
@@ -194,7 +196,7 @@
       <li><b>1.</b> A target number appears. Flip the bit-switches ON (1) or OFF (0).</li>
       <li><b>2.</b> Place values are <b>128 64 32 16 8 4 2 1</b>. An ON bit adds its value.</li>
       <li><b>3.</b> Make the running total equal the target before time runs out.</li>
-      <li><b>4.</b> Be fast &amp; build streaks for bonus points. 3 lives — good luck!</li>
+      <li><b>4.</b> Clear <b>3 numbers</b> to climb a level. Reach <b>Level 20</b> to win! 3 lives.</li>
     </ul>
     <div class="center"><button id="startBtn" class="btn">▶ Start</button></div>
   </section>
@@ -207,6 +209,7 @@
       <div class="stat">BEST <b id="best">0</b></div>
     </div>
     <div class="timerbar"><div id="timerfill" class="timerfill"></div></div>
+    <div class="lvlprog">LEVEL <b id="level">1</b> / 20 · <span id="lvlSub">number 1 of 3</span></div>
 
     <div class="target-box">
       <div class="target-label">MAKE THIS NUMBER</div>
@@ -221,6 +224,19 @@
     <div class="switches" id="switches"></div>
 
     <p class="hint">Tip: turning on a switch <b>adds</b> its place value. e.g. <code>0000 1010</code> = 8 + 2 = <code>10</code></p>
+  </section>
+
+  <!-- VICTORY -->
+  <section id="win" class="card hidden">
+    <div class="tag">SYSTEM ONLINE</div>
+    <h1>You Win!</h1>
+    <div class="over-stats">
+      <div class="stat"><b id="winScore">0</b><span>SCORE</span></div>
+      <div class="stat"><b id="winBest">0</b><span>BEST</span></div>
+      <div class="stat"><b>20</b><span>LEVELS</span></div>
+    </div>
+    <p class="lead" id="winMsg">You cleared all 20 levels — a true binary master!</p>
+    <div class="center"><button id="winAgainBtn" class="btn">↻ Play Again</button></div>
   </section>
 
   <!-- GAME OVER -->
@@ -250,16 +266,20 @@
 
   // ---- element refs ----
   var $ = function (id) { return document.getElementById(id); };
-  var startScreen = $("start"), gameScreen = $("game"), overScreen = $("over");
+  var startScreen = $("start"), gameScreen = $("game"), overScreen = $("over"), winScreen = $("win");
   var scoreEl = $("score"), bestEl = $("best"), livesEl = $("lives");
   var targetEl = $("target"), binEl = $("binstr"), totalEl = $("total");
   var timerFill = $("timerfill"), switchesEl = $("switches"), toast = $("toast");
+  var levelEl = $("level"), lvlSubEl = $("lvlSub");
 
   var PLACES = [128, 64, 32, 16, 8, 4, 2, 1];
   var ROUND_MS = 20000;
+  var TOTAL_LEVELS = 20;
+  var PER_LEVEL = 3; // correct targets needed to advance a level
 
   // ---- state ----
   var bits, score, lives, solved, streak, target;
+  var level, levelSolved, roundDur;
   var timeLeft, rafId, roundStart, locked;
 
   bestEl.textContent = Arcade.best(SLUG);
@@ -275,18 +295,23 @@
     bitEls.push(d);
   });
 
-  // ---- difficulty: max target grows with rounds solved ----
-  function maxForSolved(n) {
-    if (n < 3) return 15;     // 4 bits
-    if (n < 6) return 31;
-    if (n < 9) return 63;
-    if (n < 13) return 127;
-    return 255;               // full 8 bits
+  // ---- difficulty by level (1..20) ----
+  // L1-5: up to 15 (4 bits)  L6-10: up to 63  L11-15: up to 255
+  // L16-20: full 8 bits, but the round timer shortens each level
+  function maxForLevel(lv) {
+    if (lv <= 5) return 15;
+    if (lv <= 10) return 63;
+    return 255; // L11-20 full 8 bits
+  }
+  function roundMsForLevel(lv) {
+    if (lv <= 15) return ROUND_MS;
+    // L16..L20 tighten the clock, floored so it stays winnable
+    return Math.max(9000, ROUND_MS - (lv - 15) * 2200);
   }
 
   function newTarget() {
-    var max = maxForSolved(solved);
-    var min = solved < 3 ? 1 : Math.max(1, Math.floor(max / 4));
+    var max = maxForLevel(level);
+    var min = level <= 2 ? 1 : Math.max(1, Math.floor(max / 4));
     var t;
     do { t = min + Math.floor(Math.random() * (max - min + 1)); }
     while (t === value() && t === target); // avoid trivially already-set
@@ -326,17 +351,24 @@
   // ---- round timer ----
   function tick() {
     var elapsed = performance.now() - roundStart;
-    timeLeft = Math.max(0, ROUND_MS - elapsed);
-    var pct = (timeLeft / ROUND_MS) * 100;
+    timeLeft = Math.max(0, roundDur - elapsed);
+    var pct = (timeLeft / roundDur) * 100;
     timerFill.style.width = pct + "%";
     timerFill.classList.toggle("low", pct < 30);
     if (timeLeft <= 0) { timeUp(); return; }
     rafId = requestAnimationFrame(tick);
   }
 
+  function paintLevel() {
+    levelEl.textContent = level;
+    lvlSubEl.textContent = "number " + Math.min(levelSolved + 1, PER_LEVEL) + " of " + PER_LEVEL;
+  }
+
   function startRound() {
     locked = false;
     bits = [0, 0, 0, 0, 0, 0, 0, 0];
+    roundDur = roundMsForLevel(level);
+    paintLevel();
     newTarget();
     render();
     roundStart = performance.now();
@@ -350,9 +382,10 @@
     locked = true;
     cancelAnimationFrame(rafId);
     solved++;
+    levelSolved++;
     streak++;
     // scoring: base + speed bonus (up to 100) + streak bonus
-    var speedBonus = Math.round((timeLeft / ROUND_MS) * 100);
+    var speedBonus = Math.round((timeLeft / roundDur) * 100);
     var streakBonus = (streak - 1) * 15;
     var gained = 50 + speedBonus + streakBonus;
     score += gained;
@@ -366,6 +399,21 @@
       SFX.play("coin");
       SFX.play("correct");
       showToast("+" + gained, "#34d399");
+    }
+    paintLevel();
+
+    // level complete?
+    if (levelSolved >= PER_LEVEL) {
+      if (level >= TOTAL_LEVELS) { setTimeout(victory, 800); return; }
+      level++;
+      levelSolved = 0;
+      streak = 0; // fresh start each level
+      setTimeout(function () {
+        SFX.play("powerup");
+        showToast("LEVEL " + level, "#a5f3fc");
+        setTimeout(startRound, 650);
+      }, 800);
+      return;
     }
 
     // brief pause so the player sees the match, then next round
@@ -405,12 +453,23 @@
   // ---- game flow ----
   function newGame() {
     score = 0; lives = 3; solved = 0; streak = 0;
+    level = 1; levelSolved = 0;
     scoreEl.textContent = 0;
     bestEl.textContent = Arcade.best(SLUG);
     paintLives();
     show(gameScreen);
     SFX.play("start");
     startRound();
+  }
+
+  function victory() {
+    cancelAnimationFrame(rafId);
+    Arcade.best(SLUG, score);
+    $("winScore").textContent = score;
+    $("winBest").textContent = Arcade.best(SLUG);
+    show(winScreen);
+    SFX.play("fanfare");
+    Arcade.confetti();
   }
 
   function gameOver() {
@@ -428,13 +487,14 @@
   }
 
   function show(section) {
-    [startScreen, gameScreen, overScreen].forEach(function (s) {
+    [startScreen, gameScreen, overScreen, winScreen].forEach(function (s) {
       s.classList.toggle("hidden", s !== section);
     });
   }
 
   $("startBtn").addEventListener("click", function () { SFX.play("select"); newGame(); });
   $("againBtn").addEventListener("click", function () { SFX.play("select"); newGame(); });
+  $("winAgainBtn").addEventListener("click", function () { SFX.play("select"); newGame(); });
 })();
 </script>
 </body>

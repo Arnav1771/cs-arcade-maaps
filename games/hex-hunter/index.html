@@ -141,25 +141,16 @@
       <span class="chip" style="background:#000000;color:#fff">#000000</span> black (all off)
     </div>
 
-    <p class="lede" style="margin-bottom:6px">Pick a difficulty:</p>
-    <div class="options-row" id="modeRow">
-      <div class="toggle on" data-mode="easy">Easy<small>simple, bold colours</small></div>
-      <div class="toggle" data-mode="hard">Hard<small>any random colour</small></div>
-    </div>
-    <p class="lede" style="margin-bottom:6px">Beat the clock?</p>
-    <div class="options-row" id="timerRow">
-      <div class="toggle on" data-timer="off">Relaxed<small>no timer</small></div>
-      <div class="toggle" data-timer="on">Timed<small>~10s per round</small></div>
-    </div>
+    <p class="lede" style="margin-bottom:6px">Climb <b>20 levels</b>. Early levels are big, bold colours with easy-to-tell-apart choices. As you rise, the shades get subtler, the choices get closer, there are more of them, and the clock speeds up. Clear <b>Level 20</b> to win!</p>
 
-    <button class="btn" id="startBtn">▶ Start Hunting</button>
-    <p class="lede" style="text-align:center;margin-bottom:0;font-size:13px">10 rounds • Best score: <b id="bestStart">0</b></p>
+    <button class="btn" id="startBtn">▶ Start the Climb</button>
+    <p class="lede" style="text-align:center;margin-bottom:0;font-size:13px">20 levels • Best score: <b id="bestStart">0</b></p>
   </section>
 
   <!-- ============ GAME SCREEN ============ -->
   <section id="gameScreen" class="card hidden">
     <div class="hud">
-      <div class="stat"><b id="hRound">1</b><span>Round</span></div>
+      <div class="stat"><b id="hLevel">1/20</b><span>Level</span></div>
       <div class="stat"><b id="hScore">0</b><span>Score</span></div>
       <div class="stat"><b id="hStreak">0</b><span>Streak</span></div>
       <div class="stat"><b id="hBest">0</b><span>Best</span></div>
@@ -178,7 +169,7 @@
     <div class="big-score" id="finalScore">0</div>
     <div class="result-row">
       <div class="stat"><b id="rAcc">0%</b><span>Accuracy</span></div>
-      <div class="stat"><b id="rCorrect">0/10</b><span>Correct</span></div>
+      <div class="stat"><b id="rCorrect">0/20</b><span>Correct</span></div>
       <div class="stat"><b id="rBest">0</b><span>Best</span></div>
     </div>
     <button class="btn" id="againBtn">↻ Play Again</button>
@@ -211,24 +202,63 @@
   ];
   function easyColor() { return EASY[rnd(EASY.length)].slice(); }
   function hardColor() { return [rnd(256), rnd(256), rnd(256)]; }
-
-  // Build 4 distinct, visually-separated colours; index 0 is the answer.
-  function makeOptions(mode) {
-    var gen = mode === 'easy' ? easyColor : hardColor;
-    // min separation so no two swatches look identical/ambiguous
-    var MIN = mode === 'easy' ? 4000 : 6000;
-    var out = [gen()];
-    var guard = 0;
-    while (out.length < 4 && guard++ < 400) {
-      var c = gen();
-      var ok = true;
-      for (var i = 0; i < out.length; i++) {
-        if (dist(c, out[i]) < MIN) { ok = false; break; }
+  function clamp(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+  // a colour close to `base`, offset up to ±m per channel (smaller m = subtler = harder)
+  function nearColor(base, m) {
+    return [clamp(base[0] + rnd(2 * m + 1) - m),
+            clamp(base[1] + rnd(2 * m + 1) - m),
+            clamp(base[2] + rnd(2 * m + 1) - m)];
+  }
+  // guarantee every option is a distinct hex (never two identical swatches)
+  function dedupe(arr) {
+    var seen = {};
+    for (var i = 0; i < arr.length; i++) {
+      var h = toHex(arr[i]), tries = 0;
+      while (seen[h] && tries++ < 60) {
+        arr[i] = [clamp(arr[i][0] + rnd(11) - 5), clamp(arr[i][1] + rnd(11) - 5), clamp(arr[i][2] + rnd(11) - 5)];
+        h = toHex(arr[i]);
       }
-      if (ok) out.push(c);
+      seen[h] = true;
     }
-    // fallback if we couldn't separate enough (rare) — just fill with randoms
-    while (out.length < 4) out.push(hardColor());
+  }
+
+  // Difficulty derived purely from the current level (1..20).
+  function levelCfg(L) {
+    return {
+      options: Math.min(6, 3 + Math.floor((L - 1) / 4)),        // 3 → up to 6
+      bold: L <= 6,                                              // early: bold named colours
+      maxOff: Math.round(120 - Math.max(0, (L - 7) / 13) * 95),  // distractor spread: 120 → 25 (closer = harder)
+      minSep: 200,                                               // keep options distinct
+      timerMs: L <= 4 ? 0 : Math.max(4000, 13000 - (L - 4) * 560) // no timer early, then tighten
+    };
+  }
+
+  // Build `count` distinct colours; index 0 is the answer. Difficulty via lc.
+  function makeOptions(lc) {
+    var count = lc.options, out;
+    if (lc.bold) {
+      // pick distinct, well-separated bold colours from the named palette
+      var pool = shuffle(EASY.slice());
+      out = [];
+      for (var k = 0; k < pool.length && out.length < count; k++) {
+        var c = pool[k].slice(), ok = true;
+        for (var i = 0; i < out.length; i++) { if (dist(c, out[i]) < 3000) { ok = false; break; } }
+        if (ok) out.push(c);
+      }
+      while (out.length < count) out.push(hardColor());
+    } else {
+      // subtle colours clustered near the answer — harder to tell apart as maxOff shrinks
+      var answer = hardColor();
+      out = [answer];
+      var guard = 0;
+      while (out.length < count && guard++ < 800) {
+        var d = nearColor(answer, lc.maxOff), good = true;
+        for (var j = 0; j < out.length; j++) { if (dist(d, out[j]) < lc.minSep) { good = false; break; } }
+        if (good) out.push(d);
+      }
+      while (out.length < count) out.push(nearColor(answer, lc.maxOff + 60));
+    }
+    dedupe(out);   // out[0] (the answer) is seen first, so distractors get nudged, never the answer
     return out;
   }
   function shuffle(a) {
@@ -237,32 +267,16 @@
   }
 
   // ---------- game state ----------
-  var TOTAL = 10;
-  var cfg = { mode: 'easy', timer: false };
+  var TOTAL = 20;                                  // Level 1 → 20 climb
   var state;
   var timerId = null;
-  var currentAnswer = null, currentTypeA = true;  // current round (for timer timeout)
+  var currentAnswer = null;  // current round's answer (for timer timeout)
 
   // ---------- element refs ----------
   var $ = function (id) { return document.getElementById(id); };
   var startScreen = $('startScreen'), gameScreen = $('gameScreen'), resultScreen = $('resultScreen');
   var ask = $('ask'), optGrid = $('optGrid'), feedback = $('feedback');
   var timerBar = $('timerBar'), timerFill = timerBar.firstElementChild;
-
-  // ---------- toggles ----------
-  function wireToggles(rowId, key, cast) {
-    var row = $(rowId);
-    row.addEventListener('click', function (e) {
-      var t = e.target.closest('.toggle');
-      if (!t) return;
-      SFX.play('click');
-      row.querySelectorAll('.toggle').forEach(function (x) { x.classList.remove('on'); });
-      t.classList.add('on');
-      cfg[key] = cast(t.dataset[key]);
-    });
-  }
-  wireToggles('modeRow', 'mode', function (v) { return v; });
-  wireToggles('timerRow', 'timer', function (v) { return v === 'on'; });
 
   // ---------- screens ----------
   function show(elm) {
@@ -286,14 +300,15 @@
     state.round++;
     if (state.round > TOTAL) { return finish(); }
 
-    var opts = makeOptions(cfg.mode);      // opts[0] is the correct colour
+    var lc = levelCfg(state.round);        // difficulty scales with the level (1..20)
+    var opts = makeOptions(lc);            // opts[0] is the correct colour
     var answer = opts[0];
     var order = shuffle(opts.slice());     // display order
     var typeA = Math.random() < 0.5;       // A: hex prompt->swatches, B: swatch->codes
-    currentAnswer = answer; currentTypeA = typeA;  // for the timer's timeout callback
+    currentAnswer = answer;                // for the timer's timeout callback
 
     // HUD
-    $('hRound').textContent = state.round;
+    $('hLevel').textContent = state.round + '/20';
     $('hScore').textContent = state.score;
     $('hStreak').textContent = state.streak;
     feedback.innerHTML = '&nbsp;';
@@ -326,7 +341,7 @@
       optGrid.appendChild(d);
     });
 
-    if (cfg.timer) startTimer();
+    if (lc.timerMs > 0) startTimer(lc.timerMs);
   }
 
   // choose text colour that reads on a given background
@@ -390,9 +405,9 @@
   }
 
   // ---------- timer ----------
-  function startTimer() {
+  function startTimer(dur) {
     timerBar.classList.remove('hidden');
-    var DUR = 10000, t0 = performance.now();
+    var DUR = dur, t0 = performance.now();
     timerFill.style.width = '100%';
     // capture current round's answer for the timeout callback
     var curAnswer = currentAnswer;
@@ -418,16 +433,12 @@
     $('rCorrect').textContent = state.correct + '/' + TOTAL;
     $('rBest').textContent = Arcade.best(SLUG);
 
-    var good = acc >= 70;
-    if (good) {
-      $('verdict').textContent = isBest ? '🏆 New Best Score!' : (acc >= 90 ? '🎨 Colour Master!' : '🎉 Great hunting!');
-      SFX.play('win');
-      setTimeout(function () { SFX.play('fanfare'); }, 300);
-      Arcade.confetti();
-    } else {
-      $('verdict').textContent = 'Keep practising your hex!';
-      SFX.play('lose');
-    }
+    // Reaching the end means the player cleared all 20 levels — that's a win.
+    $('verdict').textContent = isBest ? '🏆 New Best — Level 20 Cleared!'
+      : (acc >= 90 ? '🎨 Colour Master — Level 20 Cleared!' : '🎉 You climbed all 20 levels!');
+    SFX.play('win');
+    setTimeout(function () { SFX.play('fanfare'); }, 300);
+    Arcade.confetti();
     show(resultScreen);
   }
 

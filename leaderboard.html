@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leaderboard — CS Arcade • MAAPS</title>
+<meta name="description" content="Live leaderboard for the CS Arcade science exhibition." />
+<style>
+  :root { --bg:#0a0710; --ink:#fdf6e3; --muted:#b6a98c; --line:rgba(255,255,255,0.10); --gold:#fbbf24; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; color: var(--ink); min-height: 100vh;
+    background:
+      radial-gradient(900px 500px at 50% -10%, rgba(251,191,36,0.20), transparent 60%),
+      radial-gradient(700px 500px at 10% 110%, rgba(168,85,247,0.18), transparent 60%),
+      radial-gradient(700px 500px at 100% 110%, rgba(244,63,94,0.15), transparent 60%),
+      var(--bg);
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 34px 18px 70px; }
+  .top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .home { text-decoration: none; color: var(--ink); font-weight: 700; font-size: 14px; border: 1px solid var(--line);
+    border-radius: 999px; padding: 9px 16px; background: rgba(255,255,255,0.05); }
+  .home:hover { border-color: var(--gold); }
+  h1 { text-align: center; font-size: clamp(30px, 7vw, 52px); margin: 10px 0 2px; font-weight: 900; letter-spacing: -1px;
+    background: linear-gradient(100deg, #fde68a, #fbbf24 45%, #f59e0b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .school { text-align: center; color: var(--muted); font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 4px; }
+  .me { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 22px; }
+  .me b { color: #d7ff9e; }
+
+  /* podium */
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin: 8px 0 26px; min-height: 60px; }
+  .pod { flex: 1; max-width: 190px; text-align: center; border-radius: 16px 16px 8px 8px; padding: 14px 8px 12px;
+    border: 1px solid var(--line); background: rgba(255,255,255,0.05); position: relative; }
+  .pod .medal { font-size: 30px; }
+  .pod .nm { font-weight: 800; font-size: 15px; margin-top: 4px; word-break: break-word; }
+  .pod .pts { font-size: 13px; color: var(--muted); }
+  .pod.p1 { background: linear-gradient(180deg, rgba(251,191,36,0.28), rgba(251,191,36,0.05)); border-color: var(--gold); height: 150px; }
+  .pod.p2 { background: linear-gradient(180deg, rgba(203,213,225,0.25), rgba(203,213,225,0.05)); border-color: #cbd5e1; height: 122px; }
+  .pod.p3 { background: linear-gradient(180deg, rgba(217,119,6,0.28), rgba(217,119,6,0.05)); border-color: #d97706; height: 104px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 10px 12px; }
+  tbody tr { background: rgba(255,255,255,0.04); border: 1px solid var(--line); cursor: pointer; transition: background .15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.08); }
+  tbody tr.me-row { outline: 2px solid #a3e635; }
+  td { padding: 12px; font-size: 15px; }
+  .rank { font-weight: 900; width: 46px; color: var(--gold); }
+  .pname { font-weight: 700; }
+  .total { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .plays { text-align: right; color: var(--muted); font-size: 13px; width: 90px; }
+  tr.detail td { background: rgba(0,0,0,0.25); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; font-weight: 700; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; background: rgba(255,255,255,0.05); }
+  .chip b { color: var(--gold); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 10px; font-size: 15px; }
+
+  .admin { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 26px; }
+  .admin button { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--ink); background: rgba(255,255,255,0.05);
+    border: 1px solid var(--line); border-radius: 999px; padding: 10px 16px; }
+  .admin button:hover { border-color: var(--gold); }
+  .admin .danger:hover { border-color: #ef4444; color: #ffb4b4; }
+  .note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 14px; opacity: .8; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="home" href="index.html">← Back to Games</a>
+      <button class="home" id="soundBtn">🔊 Sound</button>
+    </div>
+    <p class="school">🏫 Maharaja Aggarsain Adarsh Public School</p>
+    <h1>🏆 Leaderboard</h1>
+    <p class="me" id="meLine"></p>
+
+    <div class="podium" id="podium"></div>
+
+    <div id="tableWrap"></div>
+
+    <div class="admin">
+      <button id="switchBtn">👤 Change Player</button>
+      <button id="exportBtn">⬇ Export CSV</button>
+      <button id="resetBtn" class="danger">🗑 Reset Leaderboard</button>
+    </div>
+    <p class="note">Scores are saved on this device. Click any row to see that student's per-game scores.</p>
+  </div>
+
+  <script src="assets/js/audio.js"></script>
+  <script src="assets/js/arcade.js"></script>
+  <script src="assets/js/games.js"></script>
+  <script>
+    var TITLES = {}; CS_GAMES.forEach(function (g) { TITLES[g.slug] = { title: g.title, icon: g.icon }; });
+    var podium = document.getElementById('podium');
+    var tableWrap = document.getElementById('tableWrap');
+    var meLine = document.getElementById('meLine');
+
+    function render() {
+      var rows = Arcade.leaderboard();
+      var me = Arcade.getPlayer();
+      meLine.innerHTML = me ? ('You are playing as <b>' + esc(me) + '</b>') : 'No player set — <b>Guest</b> mode';
+
+      // podium (top 3)
+      podium.innerHTML = '';
+      var order = [1, 0, 2]; // show 2nd, 1st, 3rd left-to-right
+      order.forEach(function (idx) {
+        var r = rows[idx];
+        var pos = idx + 1;
+        var d = document.createElement('div');
+        d.className = 'pod p' + pos;
+        if (!r) { d.style.visibility = 'hidden'; }
+        else d.innerHTML = '<div class="medal">' + ['🥇','🥈','🥉'][idx] + '</div>' +
+          '<div class="nm">' + esc(r.name) + '</div><div class="pts">' + r.total + ' pts</div>';
+        podium.appendChild(d);
+      });
+
+      if (!rows.length) { tableWrap.innerHTML = '<div class="empty">No scores yet. Play a game and your name will appear here! 🎮</div>'; return; }
+
+      var html = '<table><thead><tr><th>#</th><th>Player</th><th style="text-align:right">Points</th><th style="text-align:right">Plays</th></tr></thead><tbody>';
+      rows.forEach(function (r, i) {
+        var meCls = (r.name === me) ? ' me-row' : '';
+        html += '<tr class="prow' + meCls + '" data-i="' + i + '">' +
+          '<td class="rank">' + (i + 1) + '</td>' +
+          '<td class="pname">' + esc(r.name) + (r.name === me ? ' <span style="color:#a3e635">(you)</span>' : '') + '</td>' +
+          '<td class="total">' + r.total + '</td>' +
+          '<td class="plays">' + r.plays + '</td></tr>' +
+          '<tr class="detail" id="d' + i + '" hidden><td colspan="4"><div class="chips">' + chips(r.games) + '</div></td></tr>';
+      });
+      html += '</tbody></table>';
+      tableWrap.innerHTML = html;
+
+      Array.prototype.forEach.call(document.querySelectorAll('.prow'), function (tr) {
+        tr.addEventListener('click', function () {
+          var d = document.getElementById('d' + tr.getAttribute('data-i'));
+          d.hidden = !d.hidden; SFX.play('click');
+        });
+      });
+    }
+
+    function chips(games) {
+      var keys = Object.keys(games || {});
+      if (!keys.length) return '<span class="chip">No games played yet</span>';
+      keys.sort(function (a, b) { return games[b] - games[a]; });
+      return keys.map(function (s) {
+        var t = TITLES[s] || { title: s, icon: '🎮' };
+        return '<span class="chip">' + t.icon + ' ' + esc(t.title) + ' <b>' + games[s] + '</b></span>';
+      }).join('');
+    }
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); }
+
+    // ---- admin controls ----
+    document.getElementById('switchBtn').addEventListener('click', function () {
+      SFX.play('select');
+      var n = prompt('Enter player name:', Arcade.getPlayer() || '');
+      if (n && n.trim()) { Arcade.setPlayer(n.trim()); render(); }
+    });
+    document.getElementById('exportBtn').addEventListener('click', function () {
+      SFX.play('coin');
+      var rows = Arcade.leaderboard();
+      var slugs = CS_GAMES.map(function (g) { return g.slug; });
+      var header = ['Rank', 'Player', 'Total'].concat(CS_GAMES.map(function (g) { return g.title; })).concat(['Plays']);
+      var lines = [header.join(',')];
+      rows.forEach(function (r, i) {
+        var cells = [i + 1, csv(r.name), r.total];
+        slugs.forEach(function (s) { cells.push(r.games[s] || 0); });
+        cells.push(r.plays);
+        lines.push(cells.join(','));
+      });
+      var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'cs-arcade-leaderboard.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+    function csv(s) { s = String(s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      if (confirm('Reset the WHOLE leaderboard? This clears every student\'s scores on this device and cannot be undone.')) {
+        Arcade.resetLeaderboard(); SFX.play('wrong'); render();
+      }
+    });
+
+    var sb = document.getElementById('soundBtn');
+    function paintSound() { sb.textContent = SFX.isMuted() ? '🔇 Sound' : '🔊 Sound'; }
+    paintSound();
+    sb.addEventListener('click', function () { SFX.toggleMute(); if (!SFX.isMuted()) SFX.play('button'); paintSound(); });
+
+    render();
+  </script>
+</body>
+</html>

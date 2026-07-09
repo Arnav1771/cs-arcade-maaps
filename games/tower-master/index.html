@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Tower Master</title>
+<style>
+  :root {
+    --accent: #14b8a6;
+    --accent-dim: #0f766e;
+    --bg0: #1a120b;
+    --bg1: #241a10;
+    --card: rgba(38, 28, 18, 0.78);
+    --ink: #f5ede0;
+    --muted: #b79c7d;
+    --stone: #3a2c1c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 700px at 80% -10%, rgba(20, 184, 166, 0.16), transparent 60%),
+      radial-gradient(900px 600px at 0% 110%, rgba(217, 119, 6, 0.12), transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg0));
+    min-height: 100%;
+    padding: 64px 12px 26px;
+    display: flex; flex-direction: column; align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { width: 100%; max-width: 760px; }
+
+  header.hero { text-align: center; margin-bottom: 10px; }
+  h1 {
+    font-size: clamp(26px, 6vw, 40px); letter-spacing: 0.5px;
+    background: linear-gradient(90deg, #5eead4, var(--accent), #f0b458);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tag { color: var(--accent); font-weight: 700; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .how { color: var(--muted); font-size: 13.5px; line-height: 1.5; max-width: 580px; margin: 8px auto 0; }
+  .how b { color: var(--ink); }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid rgba(20, 184, 166, 0.22);
+    border-radius: 18px; padding: 14px 14px 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px); margin-top: 12px;
+  }
+
+  .hud { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 8px; }
+  .stat {
+    flex: 1 1 76px; min-width: 66px; text-align: center;
+    background: rgba(26, 18, 11, 0.6);
+    border: 1px solid rgba(20, 184, 166, 0.16);
+    border-radius: 12px; padding: 7px 5px;
+  }
+  .stat .k { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .v { font-size: 20px; font-weight: 800; color: var(--accent); }
+  .stat .v.warn { color: #f0b458; }
+  .stat .v.danger { color: #f87171; }
+
+  .goal { text-align: center; font-size: 13px; color: var(--muted); margin: 4px 0 10px; }
+  .goal span { color: var(--accent); font-weight: 700; }
+
+  /* ---- pegs area ---- */
+  #board {
+    display: flex; justify-content: space-around; align-items: flex-end;
+    gap: 6px; height: 268px; padding: 0 2px;
+  }
+  .peg {
+    position: relative; flex: 1 1 0; min-width: 0; height: 100%;
+    display: flex; flex-direction: column-reverse; align-items: center; justify-content: flex-start;
+    cursor: pointer; padding-bottom: 14px;
+  }
+  .peg .rod {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: calc(100% - 14px);
+    background: linear-gradient(180deg, #6b5333, #4a3822);
+    border-radius: 6px 6px 0 0; z-index: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  }
+  .peg .base {
+    position: absolute; bottom: 0; left: 4%; width: 92%; height: 14px;
+    background: linear-gradient(180deg, #6b5333, #3a2c1c);
+    border-radius: 6px; z-index: 1;
+    box-shadow: 0 3px 8px rgba(0,0,0,.4);
+  }
+  .peg .label {
+    position: absolute; bottom: -2px; left: 0; right: 0; z-index: 2;
+    text-align: center; font-size: 11px; font-weight: 800; color: #241a10;
+    pointer-events: none; letter-spacing: .5px;
+  }
+  .disk {
+    position: relative; z-index: 2; height: 24px;
+    border-radius: 8px; margin-bottom: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: rgba(0,0,0,.55);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 6px rgba(0,0,0,.28), 0 2px 4px rgba(0,0,0,.35);
+    transition: transform .14s ease, filter .14s ease;
+  }
+  .peg.sel .disk:last-child {
+    transform: translateY(-10px) scale(1.04);
+    filter: brightness(1.25) saturate(1.2);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.5), 0 0 0 3px var(--accent), 0 6px 16px rgba(0,0,0,.5);
+  }
+  .peg.target-ok::before, .peg.target-bad::before {
+    content: ''; position: absolute; inset: 0 2%; border-radius: 12px; z-index: 0;
+  }
+  .peg.target-ok::before { box-shadow: inset 0 0 0 2px rgba(20,184,166,.7); }
+  .peg.shake { animation: shake .32s ease; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); } 75% { transform: translateX(6px); }
+  }
+  .disk.drop { animation: dropIn .22s ease; }
+  @keyframes dropIn { 0% { transform: translateY(-14px); } 100% { transform: translateY(0); } }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+  button.btn {
+    font-family: inherit; font-weight: 700; font-size: 14px;
+    color: #04120c; background: linear-gradient(180deg, #5eead4, var(--accent));
+    border: none; border-radius: 999px; padding: 12px 20px; cursor: pointer;
+    box-shadow: 0 6px 16px rgba(20, 184, 166, 0.3);
+    transition: transform 0.12s, filter 0.12s; min-height: 44px;
+  }
+  button.btn.ghost { color: var(--ink); background: rgba(26, 18, 11, 0.65); border: 1px solid rgba(20,184,166,.35); box-shadow: none; }
+  button.btn:hover { filter: brightness(1.06); }
+  button.btn:active { transform: translateY(2px); }
+  button.btn:disabled { opacity: 0.4; cursor: default; }
+
+  .msg { text-align: center; margin-top: 12px; min-height: 22px; font-weight: 700; font-size: 14.5px; color: var(--accent); }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 9000; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(15, 10, 5, 0.82); backdrop-filter: blur(4px);
+  }
+  .overlay.show { display: flex; }
+  .card-win {
+    background: linear-gradient(160deg, #2b2013, #17100a);
+    border: 1px solid var(--accent); border-radius: 20px;
+    padding: 26px 24px; text-align: center; max-width: 400px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  }
+  .card-win h2 { font-size: 27px; margin-bottom: 6px; color: var(--accent); }
+  .card-win p { color: var(--muted); font-size: 14.5px; line-height: 1.5; margin-bottom: 6px; }
+  .card-win .big { font-size: 38px; font-weight: 900; color: var(--ink); margin: 6px 0; }
+  .card-win .row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="tag">Concept: Problem-Solving &amp; Planning</div>
+      <h1>Tower Master</h1>
+      <p class="how">
+        The ancient <b>Tower of Hanoi</b> puzzle. Move the whole stack of stones from the
+        <b>left temple</b> to the <b>right temple</b>. Rules: move <b>one stone at a time</b>,
+        and <b>never place a bigger stone on a smaller one</b>. Plan ahead to match the fewest moves!
+      </p>
+    </header>
+
+    <div class="panel">
+      <div class="hud">
+        <div class="stat"><div class="k">Level</div><div class="v"><span id="lvl">1</span>/20</div></div>
+        <div class="stat"><div class="k">Moves</div><div class="v" id="moves">0</div></div>
+        <div class="stat"><div class="k">Optimal</div><div class="v" id="opt">3</div></div>
+        <div class="stat" id="extraStat" style="display:none"><div class="k" id="extraK">Limit</div><div class="v" id="extraV">-</div></div>
+        <div class="stat"><div class="k">Best</div><div class="v" id="best">0</div></div>
+      </div>
+
+      <div class="goal">Tap a temple to <span>lift</span> its top stone, tap another to <span>drop</span> it. Get all stones to the <span>right</span> temple.</div>
+      <div id="board" aria-label="three temple pegs"></div>
+
+      <div class="controls">
+        <button class="btn ghost" id="restartBtn">↺ Restart Level</button>
+        <button class="btn" id="nextBtn" disabled>Next Level →</button>
+      </div>
+      <div class="msg" id="msg">Tap the left temple to lift its top stone.</div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="card-win">
+      <h2 id="winTitle">Solved! 🎉</h2>
+      <p id="winSub"></p>
+      <div class="big" id="winScore">+0</div>
+      <p id="winPar"></p>
+      <div class="row">
+        <button class="btn ghost" id="replayBtn">Replay Level</button>
+        <button class="btn" id="advanceBtn">Next Level →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/audio.js"></script>
+  <script src="../../assets/js/arcade.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var SLUG = 'tower-master';
+    Arcade.mount({ title: 'Tower Master', accent: '#14b8a6' });
+
+    // ---- 20 levels: disks grow gently, later levels add move-limit / timer ----
+    // {d: disk count, limit: extra moves cap (0=none), time: seconds (0=none)}
+    var LEVELS = [
+      { d: 2 }, { d: 3 }, { d: 3 }, { d: 4 }, { d: 4 },
+      { d: 5 }, { d: 5 }, { d: 6 }, { d: 6 }, { d: 7 },
+      { d: 4, limit: 22 }, { d: 5, limit: 44 }, { d: 6, limit: 88 },
+      { d: 5, time: 100 }, { d: 6, time: 170 },
+      { d: 7, limit: 178 }, { d: 6, time: 150 }, { d: 7, time: 260 },
+      { d: 7, limit: 152 }, { d: 8 }
+    ];
+
+    var level = 0;          // 0-based index into LEVELS
+    var pegs = [[], [], []]; // each = disk sizes bottom->top (largest first)
+    var n = 2;              // disks this level
+    var optimal = 3;        // 2^n - 1
+    var moves = 0;
+    var sel = -1;           // peg currently lifted (-1 none)
+    var locked = false;     // level finished (won)
+    var animating = false;
+    var totalScore = 0;
+    var timeLeft = 0, timerId = null;
+
+    var board = document.getElementById('board');
+    var elMsg = document.getElementById('msg');
+    function $(id) { return document.getElementById(id); }
+    function setText(id, t) { $(id).textContent = t; }
+
+    var PEG_NAMES = ['LEFT', 'MIDDLE', 'RIGHT'];
+
+    function diskColor(size) {
+      // smallest stone = teal, largest = warm amber (temple stone)
+      var t = n > 1 ? (size - 1) / (n - 1) : 0;
+      var hue = 175 - t * 145;      // 175 -> 30
+      return 'hsl(' + hue + ',62%,' + (58 - t * 14) + '%)';
+    }
+
+    function startLevel() {
+      stopTimer();
+      var cfg = LEVELS[level];
+      n = cfg.d;
+      optimal = Math.pow(2, n) - 1;
+      moves = 0; sel = -1; locked = false; animating = false;
+      // all disks on left peg, largest (n) at bottom -> smallest (1) on top
+      pegs = [[], [], []];
+      for (var s = n; s >= 1; s--) pegs[0].push(s);
+
+      setText('lvl', level + 1);
+      setText('moves', 0);
+      setText('opt', optimal);
+      setText('best', Arcade.best(SLUG));
+      $('nextBtn').disabled = true;
+      $('moves').className = 'v';
+
+      // extra stat: move limit OR timer
+      var ex = $('extraStat');
+      if (cfg.limit) {
+        ex.style.display = ''; setText('extraK', 'Move Cap'); setText('extraV', cfg.limit);
+        $('extraV').className = 'v';
+      } else if (cfg.time) {
+        ex.style.display = ''; setText('extraK', 'Time'); timeLeft = cfg.time;
+        paintTimer(); startTimer();
+      } else {
+        ex.style.display = 'none';
+      }
+
+      elMsg.textContent = 'Move all ' + n + ' stones to the RIGHT temple.';
+      render();
+    }
+
+    function paintTimer() {
+      var m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+      setText('extraV', m + ':' + (s < 10 ? '0' : '') + s);
+      $('extraV').className = 'v' + (timeLeft <= 10 ? ' danger' : (timeLeft <= 25 ? ' warn' : ''));
+    }
+    function startTimer() {
+      timerId = setInterval(function () {
+        timeLeft--; paintTimer();
+        if (timeLeft <= 5 && timeLeft > 0) SFX.play('tick');
+        if (timeLeft <= 0) { stopTimer(); failLevel('Time ran out!'); }
+      }, 1000);
+    }
+    function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } }
+
+    // ---- render pegs & disks ----
+    function render() {
+      board.innerHTML = '';
+      var dh = Math.max(15, Math.min(26, Math.floor(232 / (n + 1))));
+      pegs.forEach(function (stack, p) {
+        var peg = document.createElement('div');
+        peg.className = 'peg' + (p === sel ? ' sel' : '');
+        peg.appendChild(mk('div', 'rod'));
+        peg.appendChild(mk('div', 'base'));
+        var lbl = mk('div', 'label'); lbl.textContent = PEG_NAMES[p]; peg.appendChild(lbl);
+        stack.forEach(function (size, idx) {
+          var d = document.createElement('div');
+          d.className = 'disk';
+          var wPct = 34 + (n > 1 ? (size - 1) / (n - 1) : 1) * 58; // 34%..92%
+          d.style.width = wPct + '%';
+          d.style.height = dh + 'px';
+          d.style.background = 'linear-gradient(180deg,' + diskColor(size) + ',' + shade(size) + ')';
+          if (idx === stack.length - 1 && p === lastDrop) d.className += ' drop';
+          d.textContent = size;
+          peg.appendChild(d);
+        });
+        peg.addEventListener('click', function () { onPeg(p); });
+        peg.addEventListener('mouseenter', function () { if (!locked) SFX.play('hover'); });
+        board.appendChild(peg);
+      });
+      lastDrop = -1;
+    }
+    var lastDrop = -1;
+    function mk(tag, cls) { var e = document.createElement(tag); e.className = cls; return e; }
+    function shade(size) {
+      var t = n > 1 ? (size - 1) / (n - 1) : 0;
+      var hue = 175 - t * 145;
+      return 'hsl(' + hue + ',55%,' + (34 - t * 8) + '%)';
+    }
+    function top(p) { return pegs[p].length ? pegs[p][pegs[p].length - 1] : Infinity; }
+
+    // ---- interaction ----
+    function onPeg(p) {
+      if (locked || animating) return;
+      if (sel === -1) {
+        if (pegs[p].length === 0) { SFX.play('error'); flash(p); elMsg.textContent = 'That temple is empty — nothing to lift.'; return; }
+        sel = p; SFX.play('select');
+        elMsg.textContent = 'Lifted stone ' + top(p) + '. Now tap a temple to drop it.';
+        render(); return;
+      }
+      if (p === sel) { sel = -1; SFX.play('blip'); elMsg.textContent = 'Put the stone back down. Tap a temple to lift again.'; render(); return; }
+      // attempt move sel -> p (rule: only onto empty peg or a LARGER stone)
+      var moving = top(sel);
+      if (moving > top(p)) {
+        SFX.play('error'); flash(p);
+        elMsg.textContent = 'No! A bigger stone can never sit on a smaller one.';
+        return;
+      }
+      // legal move
+      pegs[p].push(pegs[sel].pop());
+      moves++; setText('moves', moves);
+      sel = -1; lastDrop = p;
+      SFX.play('move');
+      render();
+      checkState();
+    }
+
+    function flash(p) {
+      var pegEl = board.children[p];
+      if (!pegEl) return;
+      pegEl.classList.add('shake');
+      setTimeout(function () { pegEl.classList.remove('shake'); }, 320);
+    }
+
+    function checkState() {
+      var cfg = LEVELS[level];
+      // win: all disks on right peg
+      if (pegs[2].length === n) { winLevel(); return; }
+      // move-limit fail
+      if (cfg.limit && moves >= cfg.limit) { failLevel('Out of moves!'); return; }
+      if (cfg.limit) {
+        var leftMoves = cfg.limit - moves;
+        $('extraV').className = 'v' + (leftMoves <= 3 ? ' danger' : (leftMoves <= 8 ? ' warn' : ''));
+        setText('extraV', leftMoves);
+      }
+    }
+
+    // ---- scoring: reward finishing near the optimal move count ----
+    function winLevel() {
+      locked = true; stopTimer();
+      var cfg = LEVELS[level];
+      var base = n * 120;
+      // efficiency: full base at optimal, decays for extra moves
+      var over = Math.max(0, moves - optimal);
+      var eff = Math.round(base * (optimal / Math.max(optimal, moves)));
+      var perfect = moves === optimal;
+      var timeBonus = (cfg.time ? timeLeft * 2 : 0);
+      var gained = Math.max(30, eff + (perfect ? n * 50 : 0) + timeBonus);
+      totalScore += gained;
+
+      var last = level === LEVELS.length - 1;
+      var newBest = Arcade.best(SLUG, totalScore); // saves device-best + feeds leaderboard
+      setText('best', Arcade.best(SLUG));
+
+      SFX.play('win');
+      setTimeout(function () { SFX.play('fanfare'); }, 180);
+      if (perfect) setTimeout(function () { SFX.play('powerup'); }, 360);
+      Arcade.confetti();
+
+      $('winScore').textContent = '+' + gained;
+      $('winSub').textContent = 'Solved in ' + moves + ' move' + (moves === 1 ? '' : 's') +
+        (cfg.time ? ' with ' + timeLeft + 's to spare' : '') + '.';
+      $('winPar').textContent = perfect
+        ? '✨ Perfect! You matched the fewest moves possible (' + optimal + ').'
+        : 'Fewest possible was ' + optimal + ' moves. Try to match it!';
+
+      if (last) {
+        $('winTitle').textContent = '🏆 GRAND VICTORY!';
+        $('winSub').textContent = 'You conquered all 20 towers! Final score ' + totalScore + '.';
+        $('winPar').textContent = 'You have mastered the art of planning ahead. A true Tower Master!';
+        $('advanceBtn').textContent = 'Play Again ↺';
+      } else {
+        $('winTitle').textContent = newBest ? 'New Best! 🏆' : 'Solved! 🎉';
+        $('advanceBtn').textContent = 'Next Level →';
+      }
+      $('replayBtn').style.display = '';
+      $('nextBtn').disabled = false;
+      $('overlay').classList.add('show');
+      elMsg.textContent = 'Solved in ' + moves + ' moves!';
+    }
+
+    function failLevel(reason) {
+      if (locked) return;
+      locked = true; stopTimer();
+      SFX.play('lose');
+      $('winTitle').textContent = 'So close! 💫';
+      $('winSub').textContent = reason + ' The tower stands unfinished.';
+      $('winScore').textContent = '';
+      $('winPar').textContent = 'Plan the order of moves and try this level again.';
+      $('replayBtn').style.display = 'none';
+      $('advanceBtn').textContent = 'Retry Level';
+      $('advanceBtn').dataset.retry = '1';
+      $('overlay').classList.add('show');
+      elMsg.textContent = reason;
+    }
+
+    function advance() {
+      $('overlay').classList.remove('show');
+      SFX.play('start');
+      if ($('advanceBtn').dataset.retry === '1') { // came from a fail
+        $('advanceBtn').dataset.retry = '';
+        startLevel(); return;
+      }
+      if (level >= LEVELS.length - 1) { level = 0; totalScore = 0; } // wrap after grand win
+      else level++;
+      startLevel();
+    }
+
+    // ---- buttons ----
+    $('restartBtn').addEventListener('click', function () { SFX.play('click'); startLevel(); });
+    $('nextBtn').addEventListener('click', function () { if (!$('nextBtn').disabled) advance(); });
+    $('replayBtn').addEventListener('click', function () { $('overlay').classList.remove('show'); SFX.play('click'); startLevel(); });
+    $('advanceBtn').addEventListener('click', advance);
+    ['restartBtn', 'nextBtn'].forEach(function (id) {
+      $(id).addEventListener('mouseenter', function () { SFX.play('hover'); });
+    });
+    window.addEventListener('resize', function () { if (!animating) render(); });
+
+    // ---- go ----
+    startLevel();
+  })();
+  </script>
+</body>
+</html>

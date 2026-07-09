@@ -19,6 +19,37 @@
   var ROOT = src.replace(/assets\/js\/arcade\.js.*$/, ''); // repo root (relative)
   var HUB = ROOT + 'index.html';
 
+  // ---- shared storage keys for player identity + leaderboard --------------
+  var PLAYER_KEY = 'csArcade.player';
+  var LB_KEY = 'csArcade.leaderboard';
+
+  function readJSON(k, def) {
+    try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; }
+    catch (e) { return def; }
+  }
+  function writeJSON(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {}
+  }
+  function lbTotal(entry) {
+    var t = 0, g = entry.games || {};
+    for (var s in g) if (g.hasOwnProperty(s)) t += (g[s] || 0);
+    return t;
+  }
+  // Record a score for the current player (max per game). Feeds the leaderboard.
+  function recordScore(slug, score) {
+    if (!slug || typeof score !== 'number' || !isFinite(score)) return;
+    var name = readJSON(PLAYER_KEY, '') || 'Guest';
+    var lb = readJSON(LB_KEY, {});
+    var e = lb[name] || { games: {}, plays: 0, updated: 0 };
+    if (!e.games) e.games = {};
+    if (score > (e.games[slug] || 0)) e.games[slug] = Math.round(score);
+    e.plays = (e.plays || 0) + 1;
+    e.updated = Date.now();
+    e.total = lbTotal(e);
+    lb[name] = e;
+    writeJSON(LB_KEY, lb);
+  }
+
   function el(tag, css, text) {
     var e = document.createElement(tag);
     if (css) e.setAttribute('style', css);
@@ -79,6 +110,8 @@
     },
 
     // high score per game key (localStorage). Call with value to save-if-higher.
+    // The 2-arg form ALSO records the score to the current player's leaderboard
+    // entry (max per game), so every game feeds the leaderboard for free.
     best: function (key, value) {
       var k = 'csArcade.best.' + key;
       if (value === undefined) {
@@ -86,9 +119,43 @@
         try { v = parseInt(localStorage.getItem(k) || '0', 10) || 0; } catch (e) {}
         return v;
       }
+      recordScore(key, value);            // feed the per-player leaderboard
       var cur = this.best(key);
       if (value > cur) { try { localStorage.setItem(k, String(value)); } catch (e) {} return true; }
       return false;
+    },
+
+    // Explicit alias for clarity in new games (same effect as best(slug, score)).
+    submitScore: function (slug, score) { return this.best(slug, score); },
+
+    // ---- player identity ---------------------------------------------------
+    getPlayer: function () { return readJSON(PLAYER_KEY, '') || ''; },
+    setPlayer: function (name) {
+      name = (name || '').toString().trim().slice(0, 24);
+      if (!name) return false;
+      writeJSON(PLAYER_KEY, name);
+      // make sure an entry exists so a player with 0 points still appears
+      var lb = readJSON(LB_KEY, {});
+      if (!lb[name]) { lb[name] = { games: {}, plays: 0, total: 0, updated: Date.now() }; writeJSON(LB_KEY, lb); }
+      global.dispatchEvent(new CustomEvent('playerchange', { detail: { name: name } }));
+      return true;
+    },
+    clearPlayer: function () { try { localStorage.removeItem(PLAYER_KEY); } catch (e) {} },
+
+    // ---- leaderboard access ------------------------------------------------
+    leaderboard: function () {
+      var lb = readJSON(LB_KEY, {}), rows = [];
+      for (var name in lb) if (lb.hasOwnProperty(name)) {
+        var e = lb[name];
+        rows.push({ name: name, total: lbTotal(e), games: e.games || {}, plays: e.plays || 0, updated: e.updated || 0 });
+      }
+      rows.sort(function (a, b) { return b.total - a.total || (a.updated - b.updated); });
+      return rows;
+    },
+    resetLeaderboard: function () { try { localStorage.removeItem(LB_KEY); } catch (e) {} },
+    removePlayer: function (name) {
+      var lb = readJSON(LB_KEY, {});
+      if (lb[name]) { delete lb[name]; writeJSON(LB_KEY, lb); }
     },
 
     confetti: function (durationMs) {

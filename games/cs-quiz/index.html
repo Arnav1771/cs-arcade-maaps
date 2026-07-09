@@ -189,11 +189,13 @@
         <div class="lead">🏆 Best: <span id="startBest">0</span></div>
       </div>
       <div class="how">
-        <b>How to play:</b> Answer <b>10</b> multiple-choice questions. You have
-        <b>15 seconds</b> each — answer fast for a bigger <b>speed bonus</b>!
+        <b>How to play:</b> Climb the ladder from <b>Level 1 → 20</b> — one question per level,
+        getting <b>harder</b> as you rise! You get <b>15s</b> on easy levels, less on tough ones —
+        answer fast for a bigger <b>speed bonus</b>!
         Right = points &amp; a coin, wrong = the correct answer lights up green.
         <div class="concept">💡 You'll learn everyday computer basics: hardware vs software,
-          input/output devices, storage units, the internet and more.</div>
+          input/output devices, bits &amp; bytes, storage units, operating systems, the internet,
+          files, binary logic and more.</div>
       </div>
       <button class="btn" id="startBtn">▶ Start the Show</button>
     </section>
@@ -201,7 +203,8 @@
     <!-- QUIZ -->
     <section id="quiz" class="panel hidden">
       <div class="hud">
-        <span class="chip">Q <span class="n" id="qNum">1</span>/10</span>
+        <span class="chip">🎬 Level <span class="n" id="qNum">1</span>/20</span>
+        <span class="chip" id="diffChip">🟢 Easy</span>
         <span class="chip">🎯 Score <span class="n" id="score">0</span></span>
         <span class="chip">⏱ <span class="n" id="secs">15</span>s</span>
       </div>
@@ -288,16 +291,16 @@
         o: ['CPU (processor)', 'Monitor', 'Keyboard', 'Speaker'] }
     ];
 
-    // ---- Grade tiers (by correct count out of 10) ----
+    // ---- Grade tiers (by correct count out of 20) ----
     var GRADES = [
-      { min: 10, emoji: '👑', title: 'CPU Champion',    line: 'Perfect score — you rule the arcade!' },
-      { min: 8,  emoji: '🚀', title: 'RAM Rockstar',    line: 'Blazing fast and super sharp!' },
-      { min: 6,  emoji: '💾', title: 'Data Whiz',       line: 'Solid work — you know your stuff.' },
-      { min: 4,  emoji: '🔌', title: 'Byte Builder',    line: 'Getting there — keep practising!' },
+      { min: 20, emoji: '👑', title: 'CPU Champion',    line: 'Perfect score — you rule the arcade!' },
+      { min: 16, emoji: '🚀', title: 'RAM Rockstar',    line: 'Blazing fast and super sharp!' },
+      { min: 12, emoji: '💾', title: 'Data Whiz',       line: 'Solid work — you know your stuff.' },
+      { min: 8,  emoji: '🔌', title: 'Byte Builder',    line: 'Getting there — keep practising!' },
       { min: 0,  emoji: '🐣', title: 'Byte Beginner',   line: 'Great start — play again to level up!' }
     ];
 
-    var Q_PER_GAME = 10, TIME = 15;
+    var Q_PER_GAME = 20, TIME = 15;
 
     // ---- DOM ----
     var $ = function (id) { return document.getElementById(id); };
