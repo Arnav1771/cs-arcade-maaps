@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CS Arcade — Maharaja Aggarsain Adarsh Public School</title>
+<meta name="description" content="Ten playable computer-science learning games. A science-exhibition project by Maharaja Aggarsain Adarsh Public School." />
+<style>
+  :root {
+    --bg: #070b1a;
+    --ink: #e7ecff;
+    --muted: #8b94c4;
+    --card: rgba(255, 255, 255, 0.04);
+    --line: rgba(255, 255, 255, 0.10);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(56, 189, 248, 0.18), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(168, 85, 247, 0.18), transparent 55%),
+      radial-gradient(900px 700px at 50% 120%, rgba(244, 63, 94, 0.12), transparent 60%),
+      var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  /* animated starfield grid */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 30%, black, transparent 85%);
+    animation: drift 40s linear infinite;
+  }
+  @keyframes drift { to { background-position: 440px 440px; } }
+
+  header {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 46px 20px 8px;
+    max-width: 1100px; margin: 0 auto;
+  }
+  .school {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 16px; background: rgba(255,255,255,0.03);
+  }
+  h1 {
+    font-size: clamp(38px, 8vw, 76px);
+    margin: 18px 0 6px;
+    font-weight: 900; letter-spacing: -1px; line-height: 1;
+    background: linear-gradient(100deg, #38bdf8, #a855f7 45%, #f43f5e);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 60px rgba(56,189,248,0.25);
+  }
+  .tagline { color: var(--ink); font-size: clamp(15px, 2.6vw, 19px); opacity: .9; margin: 0 0 6px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+
+  .controls { text-align: center; margin: 22px 0 6px; position: relative; z-index: 1; }
+  #sound {
+    cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ink);
+    background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+    border-radius: 999px; padding: 9px 18px; transition: transform .15s, border-color .2s;
+  }
+  #sound:hover { transform: translateY(-2px); border-color: #38bdf8; }
+
+  .grid {
+    position: relative; z-index: 1;
+    max-width: 1180px; margin: 26px auto 60px; padding: 0 20px;
+    display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  .card {
+    position: relative; display: block; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px 20px 20px; overflow: hidden;
+    transition: transform .18s ease, border-color .2s ease, box-shadow .25s ease;
+    isolation: isolate;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; opacity: .0;
+    background: radial-gradient(400px 200px at 50% -30%, var(--glow), transparent 70%);
+    transition: opacity .25s ease;
+  }
+  .card:hover { transform: translateY(-6px); border-color: var(--glow); box-shadow: 0 18px 40px rgba(0,0,0,0.45); }
+  .card:hover::before { opacity: 1; }
+  .num {
+    position: absolute; top: 14px; right: 16px; font-size: 12px; font-weight: 800;
+    color: var(--muted); opacity: .6;
+  }
+  .icon { font-size: 42px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+  .card h3 { margin: 12px 0 4px; font-size: 20px; font-weight: 800; }
+  .card p { margin: 0 0 12px; color: var(--muted); font-size: 13.5px; line-height: 1.45; min-height: 38px; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .5px;
+    text-transform: uppercase; color: var(--glow);
+    border: 1px solid var(--glow); border-radius: 999px; padding: 4px 10px;
+    background: color-mix(in srgb, var(--glow) 12%, transparent);
+  }
+  .play {
+    position: absolute; bottom: 18px; right: 18px; font-size: 13px; font-weight: 800;
+    color: var(--ink); opacity: 0; transform: translateX(-6px); transition: .2s;
+  }
+  .card:hover .play { opacity: 1; transform: translateX(0); }
+
+  footer {
+    position: relative; z-index: 1; text-align: center; color: var(--muted);
+    font-size: 13px; padding: 10px 20px 46px; line-height: 1.7;
+  }
+  footer a { color: #8bd3ff; }
+  .credits { margin-top: 8px; font-size: 12px; opacity: .8; }
+</style>
+</head>
+<body>
+  <header>
+    <span class="school">🏫 Maharaja Aggarsain Adarsh Public School</span>
+    <h1>CS&nbsp;ARCADE</h1>
+    <p class="tagline">Ten mini-games that make computer science click.</p>
+    <p class="sub">Science Exhibition • Pick a game and start playing — no install, works right in the browser.</p>
+  </header>
+
+  <div class="controls">
+    <button id="sound">🔊 Sound: On</button>
+  </div>
+
+  <main class="grid" id="grid"></main>
+
+  <footer>
+    Built for the school science exhibition • 10 games • Works offline once loaded<br />
+    <span class="credits">Sound effects: “512 Retro Game Sounds” by Juhani Junkala / SubspaceAudio (CC0, public domain) + synthesized WebAudio.</span>
+  </footer>
+
+  <script src="assets/js/audio.js"></script>
+  <script>
+    var GAMES = [
+      { slug: 'binary-blitz',  icon: '🔢', title: 'Binary Blitz',   desc: 'Flip the bits to match the number before time runs out.', tag: 'Binary Numbers', glow: '#38bdf8' },
+      { slug: 'logic-lab',     icon: '💡', title: 'Logic Lab',      desc: 'Wire up AND / OR / NOT gates to light the bulb.',        tag: 'Logic Gates',   glow: '#a3e635' },
+      { slug: 'robot-runner',  icon: '🤖', title: 'Robot Runner',   desc: 'Stack commands to walk the robot to the goal.',          tag: 'Algorithms',    glow: '#f59e0b' },
+      { slug: 'type-rush',     icon: '⌨️', title: 'Type Rush',      desc: 'Type the falling words before they hit the ground.',     tag: 'Typing Skills', glow: '#22d3ee' },
+      { slug: 'memory-matrix', icon: '🧠', title: 'Memory Matrix',  desc: 'Flip cards and match the tech-term pairs.',              tag: 'Memory',        glow: '#a855f7' },
+      { slug: 'hex-hunter',    icon: '🎨', title: 'Hex Hunter',     desc: 'Guess which colour a hex / RGB code makes.',             tag: 'Colour Codes',  glow: '#f43f5e' },
+      { slug: 'sort-it-out',   icon: '📊', title: 'Sort It Out',    desc: 'Drag the bars into order — think like a sorter.',        tag: 'Sorting',       glow: '#34d399' },
+      { slug: 'cs-quiz',       icon: '❓', title: 'CS Quiz Quest',  desc: 'Beat the clock on computer-basics trivia.',              tag: 'Quiz',          glow: '#fbbf24' },
+      { slug: 'cipher-crack',  icon: '🔐', title: 'Cipher Crack',   desc: 'Shift the wheel to decode the secret message.',          tag: 'Encryption',    glow: '#60a5fa' },
+      { slug: 'simon-signals', icon: '🎵', title: 'Simon Signals',  desc: 'Watch, remember and repeat the glowing pattern.',        tag: 'Patterns',      glow: '#ec4899' }
+    ];
+
+    var grid = document.getElementById('grid');
+    GAMES.forEach(function (g, i) {
+      var a = document.createElement('a');
+      a.className = 'card';
+      a.href = 'games/' + g.slug + '/index.html';
+      a.style.setProperty('--glow', g.glow);
+      a.innerHTML =
+        '<span class="num">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<div class="icon">' + g.icon + '</div>' +
+        '<h3>' + g.title + '</h3>' +
+        '<p>' + g.desc + '</p>' +
+        '<span class="tag">' + g.tag + '</span>' +
+        '<span class="play">Play ▶</span>';
+      a.addEventListener('mouseenter', function () { SFX.play('hover'); });
+      a.addEventListener('click', function () { SFX.play('select'); });
+      grid.appendChild(a);
+    });
+
+    var btn = document.getElementById('sound');
+    function paint() {
+      var m = SFX.isMuted();
+      btn.textContent = m ? '🔇 Sound: Off' : '🔊 Sound: On';
+    }
+    paint();
+    btn.addEventListener('click', function () { SFX.toggleMute(); if (!SFX.isMuted()) SFX.play('button'); paint(); });
+    window.addEventListener('sfxmutechange', paint);
+  </script>
+</body>
+</html>

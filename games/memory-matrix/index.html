@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Memory Matrix</title>
+<style>
+  :root {
+    --accent: #a855f7;
+    --accent2: #6366f1;
+    --card-back: linear-gradient(135deg, #1e1b4b, #312e81);
+    --glass: rgba(30, 27, 75, 0.45);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #e9e6ff;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(168,85,247,0.28), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(99,102,241,0.22), transparent 55%),
+      linear-gradient(160deg, #0a0714 0%, #14102b 55%, #0a0714 100%);
+    min-height: 100vh;
+    padding: 64px 12px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+  /* subtle moving grid backdrop */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -1;
+    background-image:
+      linear-gradient(rgba(168,85,247,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,85,247,0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at 50% 30%, #000 40%, transparent 85%);
+  }
+
+  .wrap { width: 100%; max-width: 640px; display: flex; flex-direction: column; align-items: center; }
+
+  /* ---- HUD ---- */
+  .hud {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .stat {
+    flex: 1 1 0;
+    min-width: 78px;
+    background: var(--glass);
+    border: 1px solid rgba(168,85,247,0.35);
+    border-radius: 14px;
+    padding: 8px 6px;
+    text-align: center;
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .stat .k { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #b8a9f0; opacity: .85; }
+  .stat .v { font-size: 20px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+  .stat .v span { color: var(--accent); }
+
+  /* ---- Board ---- */
+  .board {
+    display: grid;
+    gap: clamp(6px, 2vw, 12px);
+    width: 100%;
+    perspective: 1000px;
+  }
+  .card {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(.4,.2,.2,1);
+    border-radius: 12px;
+  }
+  .card.flipped, .card.matched { transform: rotateY(180deg); }
+  .face {
+    position: absolute; inset: 0;
+    border-radius: 12px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  /* back = the face shown while hidden (the holographic tech card) */
+  .back {
+    background: var(--card-back);
+    border: 1px solid rgba(168,85,247,0.4);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4), inset 0 0 20px rgba(99,102,241,0.15);
+  }
+  .back::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(45deg, rgba(168,85,247,0.10) 0 8px, transparent 8px 16px);
+    opacity: .5;
+  }
+  .back .logo {
+    font-size: clamp(18px, 6vw, 30px);
+    filter: drop-shadow(0 0 6px var(--accent));
+    z-index: 1;
+  }
+  /* front = revealed tech item */
+  .front {
+    transform: rotateY(180deg);
+    background: linear-gradient(160deg, rgba(168,85,247,0.22), rgba(99,102,241,0.12));
+    border: 1px solid rgba(168,85,247,0.55);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35), inset 0 0 22px rgba(168,85,247,0.18);
+    gap: 4px;
+    padding: 4px;
+  }
+  .front .emoji { font-size: clamp(24px, 9vw, 44px); line-height: 1; }
+  .front .label {
+    font-size: clamp(9px, 2.8vw, 13px);
+    font-weight: 700;
+    letter-spacing: .3px;
+    color: #f2ecff;
+    text-align: center;
+  }
+  .card.matched .front {
+    border-color: #34d399;
+    box-shadow: 0 0 16px rgba(52,211,153,0.6), inset 0 0 22px rgba(52,211,153,0.22);
+    animation: pop .4s ease;
+  }
+  @keyframes pop { 0%{transform:rotateY(180deg) scale(1);} 50%{transform:rotateY(180deg) scale(1.08);} 100%{transform:rotateY(180deg) scale(1);} }
+
+  /* ---- Overlay (start / win) ---- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 70px 16px 20px;
+    background: rgba(6,4,15,0.82);
+    backdrop-filter: blur(6px);
+  }
+  .overlay.hide { display: none; }
+  .panel {
+    width: 100%; max-width: 440px;
+    background: linear-gradient(160deg, rgba(30,27,75,0.9), rgba(20,16,43,0.92));
+    border: 1px solid rgba(168,85,247,0.5);
+    border-radius: 22px;
+    padding: 26px 22px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55), inset 0 0 30px rgba(168,85,247,0.12);
+  }
+  .panel h1 {
+    font-size: 30px; font-weight: 900; letter-spacing: .5px;
+    background: linear-gradient(90deg, #fff, var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 4px;
+  }
+  .panel .sub { color: #c9bdf5; font-size: 13px; margin-bottom: 16px; }
+  .how {
+    text-align: left; font-size: 13.5px; line-height: 1.55; color: #ded6ff;
+    background: rgba(168,85,247,0.08);
+    border: 1px solid rgba(168,85,247,0.25);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 18px;
+  }
+  .how b { color: var(--accent); }
+
+  .levels { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .lvl {
+    flex: 1 1 0; min-width: 92px;
+    cursor: pointer;
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(168,85,247,0.35);
+    border-radius: 14px; padding: 10px 8px; color: #e9e6ff;
+    font-weight: 700; transition: .18s;
+  }
+  .lvl small { display: block; font-weight: 500; font-size: 10.5px; color: #b8a9f0; margin-top: 2px; }
+  .lvl.on, .lvl:active { background: var(--accent); color: #1a0b2e; border-color: #fff; }
+  .lvl.on small { color: #2a0f45; }
+
+  .btn {
+    display: inline-block; cursor: pointer;
+    font-size: 16px; font-weight: 800; letter-spacing: .5px;
+    color: #1a0b2e;
+    background: linear-gradient(90deg, var(--accent), #c084fc);
+    border: none; border-radius: 999px; padding: 13px 30px;
+    box-shadow: 0 8px 24px rgba(168,85,247,0.45);
+    transition: transform .12s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(168,85,247,0.6); }
+  .btn:active { transform: translateY(0); }
+
+  .win-stats { display: flex; gap: 10px; justify-content: center; margin: 6px 0 18px; }
+  .win-stats .b {
+    background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3);
+    border-radius: 14px; padding: 10px 14px; min-width: 74px;
+  }
+  .win-stats .b .k { font-size: 10px; text-transform: uppercase; color: #b8a9f0; letter-spacing: 1px; }
+  .win-stats .b .v { font-size: 22px; font-weight: 800; color: #fff; }
+  .newbest { color: #fde047; font-weight: 800; font-size: 14px; margin-bottom: 10px; min-height: 18px; }
+
+  .restart {
+    margin-top: 14px;
+    cursor: pointer; font-size: 13px; font-weight: 700; letter-spacing: .5px;
+    color: #e9e6ff; background: var(--glass);
+    border: 1px solid rgba(168,85,247,0.4); border-radius: 999px; padding: 9px 18px;
+    backdrop-filter: blur(6px);
+  }
+  .restart:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <div class="stat"><div class="k">Moves</div><div class="v" id="moves">0</div></div>
+      <div class="stat"><div class="k">Pairs</div><div class="v" id="pairs">0<span>/0</span></div></div>
+      <div class="stat"><div class="k">Time</div><div class="v" id="time">0:00</div></div>
+      <div class="stat"><div class="k">Best</div><div class="v" id="best">0</div></div>
+    </div>
+    <div class="board" id="board"></div>
+    <button class="restart" id="restart">↺ Restart Level</button>
+  </div>
+
+  <!-- Start overlay -->
+  <div class="overlay" id="startOverlay">
+    <div class="panel">
+      <h1>Memory Matrix</h1>
+      <div class="sub">Holographic tech-card memory challenge</div>
+      <div class="how">
+        <b>Concept:</b> Just like a computer's <b>RAM</b> holds data so it can be recalled,
+        your brain holds the card positions.<br>
+        Flip two cards. If the tech items <b>match</b>, they stay lit.
+        If not, they flip back — remember where they were! Match all pairs to win.
+      </div>
+      <div class="levels" id="levels">
+        <div class="lvl on" data-level="0">Easy<small>4 × 3 · 6 pairs</small></div>
+        <div class="lvl" data-level="1">Medium<small>4 × 4 · 8 pairs</small></div>
+        <div class="lvl" data-level="2">Hard<small>5 × 4 · 10 pairs</small></div>
+      </div>
+      <button class="btn" id="startBtn">▶ Start Game</button>
+    </div>
+  </div>
+
+  <!-- Win overlay -->
+  <div class="overlay hide" id="winOverlay">
+    <div class="panel">
+      <h1>Matrix Cleared!</h1>
+      <div class="sub">Every chip recalled 🧠</div>
+      <div class="newbest" id="newbest"></div>
+      <div class="win-stats">
+        <div class="b"><div class="k">Moves</div><div class="v" id="wMoves">0</div></div>
+        <div class="b"><div class="k">Time</div><div class="v" id="wTime">0:00</div></div>
+        <div class="b"><div class="k">Score</div><div class="v" id="wScore">0</div></div>
+      </div>
+      <button class="btn" id="againBtn">▶ Play Again</button>
+      <div style="margin-top:14px"><button class="restart" id="menuBtn">⤺ Change Level</button></div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/audio.js"></script>
+  <script src="../../assets/js/arcade.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var SLUG = 'memory-matrix';
+    Arcade.mount({ title: 'Memory Matrix', accent: '#a855f7' });
+
+    // ---- tech items (emoji + label) ----
+    var ITEMS = [
+      ['💾','Storage'], ['🖥️','Monitor'], ['🖱️','Mouse'], ['⌨️','Keyboard'],
+      ['🌐','Internet'], ['🔌','Power'], ['🧠','CPU'], ['📶','WiFi'],
+      ['🖨️','Printer'], ['🔋','Battery'], ['💿','Disk'], ['📷','Camera']
+    ];
+
+    // ---- levels: cols, rows, pairs ----
+    var LEVELS = [
+      { cols: 4, rows: 3, pairs: 6 },
+      { cols: 4, rows: 4, pairs: 8 },
+      { cols: 5, rows: 4, pairs: 10 }
+    ];
+
+    var boardEl = document.getElementById('board');
+    var movesEl = document.getElementById('moves');
+    var pairsEl = document.getElementById('pairs');
+    var timeEl  = document.getElementById('time');
+    var bestEl  = document.getElementById('best');
+
+    var level = 0;
+    var moves = 0, matched = 0, totalPairs = 0;
+    var first = null, second = null, busy = false, locked = true;
+    var startTime = 0, timer = null, elapsed = 0;
+
+    bestEl.textContent = Arcade.best(SLUG) || 0;
+
+    function fmt(s) {
+      var m = Math.floor(s / 60), sec = s % 60;
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+    function shuffle(a) {
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+    function startTimer() {
+      startTime = Date.now();
+      clearInterval(timer);
+      timer = setInterval(function () {
+        elapsed = Math.floor((Date.now() - startTime) / 1000);
+        timeEl.textContent = fmt(elapsed);
+      }, 250);
+    }
+
+    function build() {
+      var L = LEVELS[level];
+      totalPairs = L.pairs;
+      moves = 0; matched = 0; elapsed = 0;
+      first = second = null; busy = false; locked = false;
+      movesEl.textContent = '0';
+      pairsEl.innerHTML = '0<span>/' + totalPairs + '</span>';
+      timeEl.textContent = '0:00';
+
+      // pick pairs and duplicate
+      var chosen = shuffle(ITEMS.slice()).slice(0, totalPairs);
+      var deck = shuffle(chosen.concat(chosen));
+
+      boardEl.style.gridTemplateColumns = 'repeat(' + L.cols + ', 1fr)';
+      // keep board within viewport height: cap max-width by row count
+      var maxW = Math.min(640, (L.cols / L.rows) * (window.innerHeight - 190) * 0.75);
+      boardEl.style.maxWidth = maxW > 220 ? maxW + 'px' : '';
+      boardEl.innerHTML = '';
+
+      deck.forEach(function (item) {
+        var card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML =
+          '<div class="face back"><span class="logo">💠</span></div>' +
+          '<div class="face front"><span class="emoji">' + item[0] +
+          '</span><span class="label">' + item[1] + '</span></div>';
+        card._key = item[1];
+        card.addEventListener('click', function () { flip(card); });
+        boardEl.appendChild(card);
+      });
+      startTimer();
+    }
+
+    function flip(card) {
+      if (busy || locked) return;
+      if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+      card.classList.add('flipped');
+      SFX.play('flip');
+
+      if (!first) { first = card; return; }
+      second = card;
+      moves++;
+      movesEl.textContent = moves;
+      busy = true;
+
+      if (first._key === second._key) {
+        // match!
+        setTimeout(function () {
+          first.classList.add('matched');
+          second.classList.add('matched');
+          SFX.play('correct');
+          SFX.play('coin');
+          matched++;
+          pairsEl.innerHTML = matched + '<span>/' + totalPairs + '</span>';
+          first = second = null; busy = false;
+          if (matched === totalPairs) win();
+        }, 260);
+      } else {
+        SFX.play('wrong');
+        setTimeout(function () {
+          first.classList.remove('flipped');
+          second.classList.remove('flipped');
+          first = second = null; busy = false;
+        }, 850);
+      }
+    }
+
+    function computeScore() {
+      // reward fewer moves & faster time. base per level, minus penalties.
+      var L = LEVELS[level];
+      var base = 1000 + level * 500;
+      var perfectMoves = L.pairs;              // minimum possible flips-pairs
+      var movePenalty = (moves - perfectMoves) * 12;
+      var timePenalty = elapsed * 3;
+      var s = base - movePenalty - timePenalty;
+      return Math.max(50, Math.round(s));
+    }
+
+    function win() {
+      clearInterval(timer);
+      locked = true;
+      var score = computeScore();
+      var isBest = Arcade.best(SLUG, score);
+      bestEl.textContent = Arcade.best(SLUG);
+
+      document.getElementById('wMoves').textContent = moves;
+      document.getElementById('wTime').textContent = fmt(elapsed);
+      document.getElementById('wScore').textContent = score;
+      document.getElementById('newbest').textContent = isBest ? '★ New Best Score! ★' : '';
+
+      SFX.play('win');
+      setTimeout(function () { SFX.play('fanfare'); }, 250);
+      Arcade.confetti();
+      setTimeout(function () {
+        document.getElementById('winOverlay').classList.remove('hide');
+      }, 500);
+    }
+
+    // ---- level selector ----
+    var lvlEls = document.querySelectorAll('#levels .lvl');
+    lvlEls.forEach(function (le) {
+      le.addEventListener('click', function () {
+        lvlEls.forEach(function (x) { x.classList.remove('on'); });
+        le.classList.add('on');
+        level = parseInt(le.getAttribute('data-level'), 10);
+        SFX.play('select');
+      });
+    });
+
+    // ---- buttons ----
+    document.getElementById('startBtn').addEventListener('click', function () {
+      SFX.play('start');
+      document.getElementById('startOverlay').classList.add('hide');
+      build();
+    });
+    document.getElementById('restart').addEventListener('click', function () {
+      SFX.play('click');
+      build();
+    });
+    document.getElementById('againBtn').addEventListener('click', function () {
+      SFX.play('start');
+      document.getElementById('winOverlay').classList.add('hide');
+      build();
+    });
+    document.getElementById('menuBtn').addEventListener('click', function () {
+      SFX.play('click');
+      clearInterval(timer);
+      locked = true;
+      document.getElementById('winOverlay').classList.add('hide');
+      document.getElementById('startOverlay').classList.remove('hide');
+    });
+
+    // re-fit board on rotate/resize
+    window.addEventListener('resize', function () {
+      if (locked || !LEVELS[level]) return;
+      var L = LEVELS[level];
+      var maxW = Math.min(640, (L.cols / L.rows) * (window.innerHeight - 190) * 0.75);
+      boardEl.style.maxWidth = maxW > 220 ? maxW + 'px' : '';
+    });
+  })();
+  </script>
+</body>
+</html>

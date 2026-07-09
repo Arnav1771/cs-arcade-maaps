@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Simon Signals</title>
+<style>
+  :root {
+    --accent: #ec4899;
+    --pad-green: #22c55e;
+    --pad-red: #ef4444;
+    --pad-blue: #3b82f6;
+    --pad-yellow: #eab308;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #f8fafc;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, rgba(236,72,153,.22), transparent 60%),
+      radial-gradient(900px 600px at 15% 110%, rgba(59,130,246,.18), transparent 55%),
+      linear-gradient(160deg, #0a0713 0%, #140a1f 45%, #05040a 100%);
+    min-height: 100%;
+    padding: 64px 16px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---- header / status ---- */
+  .head { text-align: center; margin-bottom: 14px; }
+  .title {
+    font-size: clamp(26px, 7vw, 44px);
+    font-weight: 900;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, #ec4899, #f9a8d4, #ec4899);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 24px rgba(236,72,153,.35);
+  }
+  .tag { font-size: 13px; color: #cbb6d4; margin-top: 4px; }
+
+  .stats {
+    display: flex; gap: 10px; justify-content: center;
+    margin: 12px 0 16px; flex-wrap: wrap;
+  }
+  .chip {
+    background: rgba(20,10,31,.75);
+    border: 1px solid rgba(236,72,153,.35);
+    border-radius: 14px; padding: 8px 16px;
+    min-width: 92px; text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .chip .k { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #b98cc9; }
+  .chip .v { font-size: 22px; font-weight: 800; color: #fff; }
+
+  /* ---- console (the pad board) ---- */
+  .console {
+    position: relative;
+    width: min(88vw, 62vh, 460px);
+    aspect-ratio: 1 / 1;
+    border-radius: 28px;
+    padding: 16px;
+    background:
+      radial-gradient(120% 120% at 30% 20%, #241329, #120a1c 70%, #0a0611);
+    border: 1px solid rgba(236,72,153,.28);
+    box-shadow:
+      0 30px 70px rgba(0,0,0,.6),
+      inset 0 2px 0 rgba(255,255,255,.05),
+      inset 0 -18px 40px rgba(0,0,0,.5);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 16px;
+    touch-action: manipulation;
+  }
+  .pad {
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+    position: relative;
+    filter: brightness(.55) saturate(.85);
+    transition: filter .12s ease, transform .1s ease, box-shadow .12s ease;
+    box-shadow: inset 0 -8px 16px rgba(0,0,0,.35), inset 0 4px 10px rgba(255,255,255,.18);
+    outline: none;
+  }
+  .pad.tl { border-top-left-radius: 42%; }
+  .pad.tr { border-top-right-radius: 42%; }
+  .pad.bl { border-bottom-left-radius: 42%; }
+  .pad.br { border-bottom-right-radius: 42%; }
+  .pad.green  { background: radial-gradient(circle at 35% 30%, #4ade80, var(--pad-green)); }
+  .pad.red    { background: radial-gradient(circle at 35% 30%, #f87171, var(--pad-red)); }
+  .pad.blue   { background: radial-gradient(circle at 35% 30%, #60a5fa, var(--pad-blue)); }
+  .pad.yellow { background: radial-gradient(circle at 35% 30%, #fde047, var(--pad-yellow)); }
+  .pad.lit {
+    filter: brightness(1.6) saturate(1.2);
+    transform: scale(1.04);
+  }
+  .pad.green.lit  { box-shadow: 0 0 40px 8px rgba(34,197,94,.8),  inset 0 0 30px rgba(255,255,255,.5); }
+  .pad.red.lit    { box-shadow: 0 0 40px 8px rgba(239,68,68,.8),  inset 0 0 30px rgba(255,255,255,.5); }
+  .pad.blue.lit   { box-shadow: 0 0 40px 8px rgba(59,130,246,.8), inset 0 0 30px rgba(255,255,255,.5); }
+  .pad.yellow.lit { box-shadow: 0 0 40px 8px rgba(234,179,8,.8),  inset 0 0 30px rgba(255,255,255,.5); }
+  .console.locked .pad { cursor: default; }
+
+  /* centre hub badge */
+  .hub {
+    position: absolute; inset: 0; margin: auto;
+    width: 30%; height: 30%; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #2a1633, #0c0713);
+    border: 2px solid rgba(236,72,153,.5);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0,0,0,.6), inset 0 2px 6px rgba(255,255,255,.08);
+    pointer-events: none; text-align: center;
+  }
+  .hub .lvl { font-size: 10px; letter-spacing: 1.5px; color: #b98cc9; text-transform: uppercase; }
+  .hub .num { font-size: clamp(20px, 6vw, 34px); font-weight: 900; color: #ec4899; }
+
+  /* ---- controls ---- */
+  .controls { margin-top: 22px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .msg { font-size: 15px; min-height: 22px; color: #f0d3e6; font-weight: 600; text-align: center; }
+  button.action {
+    font-family: inherit; font-weight: 800; font-size: 17px;
+    color: #fff; cursor: pointer;
+    background: linear-gradient(180deg, #f472b6, #db2777);
+    border: none; border-radius: 999px;
+    padding: 14px 40px;
+    box-shadow: 0 10px 24px rgba(236,72,153,.45), inset 0 2px 0 rgba(255,255,255,.35);
+    transition: transform .1s ease, box-shadow .12s ease;
+    letter-spacing: .5px;
+  }
+  button.action:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(236,72,153,.55), inset 0 2px 0 rgba(255,255,255,.35); }
+  button.action:active { transform: translateY(1px); }
+
+  /* ---- overlays ---- */
+  .flash {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 50;
+  }
+  .flash .card {
+    font-size: clamp(34px, 12vw, 80px); font-weight: 900; color: #fff;
+    text-shadow: 0 0 30px rgba(236,72,153,.9);
+    opacity: 0; transform: scale(.6);
+  }
+  .flash.show .card { animation: pop .8s ease forwards; }
+  @keyframes pop {
+    0% { opacity: 0; transform: scale(.6); }
+    25% { opacity: 1; transform: scale(1.1); }
+    70% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
+  }
+
+  .over {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(6,4,12,.82);
+    backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .over.show { display: flex; }
+  .over .panel {
+    background: linear-gradient(160deg, #1a0f26, #0d0715);
+    border: 1px solid rgba(236,72,153,.4);
+    border-radius: 22px; padding: 30px 26px; text-align: center;
+    max-width: 380px; width: 100%;
+    box-shadow: 0 30px 80px rgba(0,0,0,.7);
+  }
+  .over h2 { font-size: 30px; margin-bottom: 6px; color: #ec4899; }
+  .over p { color: #d9c2e5; margin-bottom: 6px; font-size: 15px; }
+  .over .big { font-size: 46px; font-weight: 900; color: #fff; margin: 10px 0; }
+  .over .newbest { color: #fde047; font-weight: 800; margin-bottom: 12px; min-height: 18px; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="title">SIMON SIGNALS</div>
+    <div class="tag">🎧 Computers follow exact sequences — train your memory to repeat the pattern.</div>
+  </div>
+
+  <div class="stats">
+    <div class="chip"><div class="k">Round</div><div class="v" id="roundStat">0</div></div>
+    <div class="chip"><div class="k">Best</div><div class="v" id="bestStat">0</div></div>
+  </div>
+
+  <div class="console" id="board">
+    <button class="pad green tl"  data-i="0" aria-label="green pad"></button>
+    <button class="pad red tr"    data-i="1" aria-label="red pad"></button>
+    <button class="pad yellow bl" data-i="2" aria-label="yellow pad"></button>
+    <button class="pad blue br"   data-i="3" aria-label="blue pad"></button>
+    <div class="hub"><span class="lvl">Round</span><span class="num" id="hubNum">–</span></div>
+  </div>
+
+  <div class="controls">
+    <div class="msg" id="msg">Watch the pattern, then repeat it.</div>
+    <button class="action" id="startBtn">▶ Start</button>
+  </div>
+
+  <div class="flash" id="flash"><div class="card" id="flashText"></div></div>
+
+  <div class="over" id="over">
+    <div class="panel">
+      <h2>Signal Lost!</h2>
+      <p>You repeated the pattern up to</p>
+      <div class="big" id="finalRound">0</div>
+      <p>rounds.</p>
+      <div class="newbest" id="newBest"></div>
+      <button class="action" id="againBtn">↻ Play Again</button>
+    </div>
+  </div>
+
+  <script src="../../assets/js/audio.js"></script>
+  <script src="../../assets/js/arcade.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var SLUG = 'simon-signals';
+    Arcade.mount({ title: 'Simon Signals', accent: '#ec4899' });
+
+    // Each pad: its own colour class + its own distinct tone frequency.
+    var PADS = [
+      { freq: 330 }, // green  (top-left)
+      { freq: 415 }, // red    (top-right)
+      { freq: 523 }, // yellow (bottom-left)
+      { freq: 659 }  // blue   (bottom-right)
+    ];
+
+    var board   = document.getElementById('board');
+    var padEls   = Array.prototype.slice.call(board.querySelectorAll('.pad'));
+    var roundStat = document.getElementById('roundStat');
+    var bestStat  = document.getElementById('bestStat');
+    var hubNum    = document.getElementById('hubNum');
+    var msg       = document.getElementById('msg');
+    var startBtn  = document.getElementById('startBtn');
+    var flash     = document.getElementById('flash');
+    var flashText = document.getElementById('flashText');
+    var over      = document.getElementById('over');
+    var finalRound = document.getElementById('finalRound');
+    var newBest   = document.getElementById('newBest');
+    var againBtn  = document.getElementById('againBtn');
+
+    var sequence = [];     // the growing list of pad indices
+    var inputPos = 0;      // how far the player is through repeating
+    var playing = false;   // a game is in progress
+    var accepting = false; // player input allowed right now
+
+    bestStat.textContent = Arcade.best(SLUG);
+
+    // Light a pad + play its tone. Returns after `dur` visual time.
+    function lightPad(i, dur) {
+      var el = padEls[i];
+      el.classList.add('lit');
+      SFX.tone({ freq: PADS[i].freq, dur: Math.max(0.18, dur / 1000 * 0.9), type: 'triangle', gain: 0.28 });
+      setTimeout(function () { el.classList.remove('lit'); }, dur);
+    }
+
+    // Speed: pads play a little faster as rounds climb.
+    function stepTime() {
+      var r = sequence.length;
+      if (r >= 13) return 380;
+      if (r >= 9)  return 460;
+      if (r >= 6)  return 560;
+      return 640;
+    }
+
+    function setLocked(locked) {
+      accepting = !locked;
+      board.classList.toggle('locked', locked);
+    }
+
+    function showFlash(text) {
+      flashText.textContent = text;
+      flash.classList.remove('show');
+      // force reflow so the animation restarts each round
+      void flash.offsetWidth;
+      flash.classList.add('show');
+    }
+
+    // Play the whole sequence back to the player, then hand over control.
+    function playSequence() {
+      setLocked(true);
+      msg.textContent = 'Watch closely…';
+      var gap = stepTime();
+      var on = Math.max(240, gap - 180);
+      sequence.forEach(function (idx, n) {
+        setTimeout(function () { lightPad(idx, on); }, 600 + n * gap);
+      });
+      var total = 600 + sequence.length * gap + 150;
+      setTimeout(function () {
+        msg.textContent = 'Your turn — repeat it!';
+        inputPos = 0;
+        setLocked(false);
+      }, total);
+    }
+
+    // Begin a new round: append one random signal, flash "Round N", replay.
+    function nextRound() {
+      sequence.push((Math.random() * 4) | 0);
+      var r = sequence.length;
+      roundStat.textContent = r;
+      hubNum.textContent = r;
+      showFlash('Round ' + r);
+      SFX.play('blip');
+      setTimeout(playSequence, 850);
+    }
+
+    function startGame() {
+      sequence = [];
+      inputPos = 0;
+      playing = true;
+      over.classList.remove('show');
+      startBtn.style.display = 'none';
+      roundStat.textContent = '0';
+      SFX.play('start');
+      msg.textContent = 'Get ready…';
+      setTimeout(nextRound, 700);
+    }
+
+    function gameOver() {
+      playing = false;
+      setLocked(true);
+      var reached = sequence.length; // rounds survived = sequence length reached
+      // wrong pad feedback + game-over sound
+      SFX.play('wrong');
+      setTimeout(function () { SFX.play('lose'); }, 180);
+      finalRound.textContent = reached;
+      var isBest = Arcade.best(SLUG, reached);
+      bestStat.textContent = Arcade.best(SLUG);
+      if (isBest && reached > 0) {
+        newBest.textContent = '🏆 New Best!';
+        SFX.play('fanfare');
+        Arcade.confetti();
+      } else {
+        newBest.textContent = '';
+      }
+      setTimeout(function () { over.classList.add('show'); }, 500);
+    }
+
+    // Player pressed a pad.
+    function press(i) {
+      if (!playing || !accepting) return;
+      lightPad(i, 240);
+      if (i === sequence[inputPos]) {
+        inputPos++;
+        if (inputPos === sequence.length) {
+          // completed this round correctly
+          accepting = false;
+          SFX.play('correct');
+          setTimeout(function () { SFX.play('coin'); }, 120);
+          msg.textContent = 'Nice! Signal locked ✓';
+          setTimeout(nextRound, 900);
+        }
+      } else {
+        gameOver();
+      }
+    }
+
+    padEls.forEach(function (el) {
+      var i = parseInt(el.getAttribute('data-i'), 10);
+      el.addEventListener('pointerdown', function (e) { e.preventDefault(); press(i); });
+    });
+
+    startBtn.addEventListener('click', function () { SFX.play('click'); startGame(); });
+    againBtn.addEventListener('click', function () {
+      SFX.play('click');
+      over.classList.remove('show');
+      startGame();
+    });
+  })();
+  </script>
+</body>
+</html>

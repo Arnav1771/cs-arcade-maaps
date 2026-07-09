@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cipher Crack</title>
+<style>
+  :root {
+    --accent: #60a5fa;
+    --accent-dim: #2563eb;
+    --ok: #34d399;
+    --bg0: #060b1a;
+    --bg1: #0d1b3a;
+    --ink: #e7eefc;
+    --muted: #8ea6cf;
+    --card: rgba(15, 27, 58, 0.72);
+    --line: rgba(96, 165, 250, 0.28);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 600px at 15% -10%, rgba(96,165,250,0.18), transparent 60%),
+      radial-gradient(700px 500px at 100% 0%, rgba(37,99,235,0.16), transparent 55%),
+      linear-gradient(160deg, var(--bg0), var(--bg1));
+    background-attachment: fixed;
+    min-height: 100%;
+    padding: 64px 14px 40px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* faint radar-grid backdrop for spy feel */
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(96,165,250,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96,165,250,0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: radial-gradient(circle at 50% 30%, #000 30%, transparent 75%);
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+    padding: 20px; backdrop-filter: blur(8px);
+    box-shadow: 0 18px 48px rgba(0,0,0,0.45);
+  }
+  h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: 1px; }
+  h1 .glyph { color: var(--accent); }
+  .tag { color: var(--accent); font-weight: 700; letter-spacing: 2px; font-size: 12px; text-transform: uppercase; }
+  p.lead { color: var(--muted); line-height: 1.5; margin: 12px 0; }
+  .concept {
+    background: rgba(96,165,250,0.1); border: 1px dashed var(--line);
+    border-radius: 12px; padding: 12px 14px; margin: 14px 0; font-size: 14px; line-height: 1.5;
+  }
+  .concept b { color: var(--accent); }
+  .how { text-align: left; margin: 12px 0 4px; padding-left: 18px; color: var(--muted); line-height: 1.6; font-size: 14px; }
+  button {
+    font-family: inherit; cursor: pointer; border: none; border-radius: 12px;
+    font-weight: 800; letter-spacing: .4px; transition: transform .08s, box-shadow .2s, background .2s;
+  }
+  button:active { transform: translateY(1px) scale(.98); }
+  .btn-primary {
+    background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+    color: #04122e; font-size: 17px; padding: 14px 26px;
+    box-shadow: 0 10px 26px rgba(96,165,250,0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 14px 32px rgba(96,165,250,0.55); }
+  .btn-ghost {
+    background: rgba(96,165,250,0.12); color: var(--ink);
+    border: 1px solid var(--line); font-size: 14px; padding: 10px 16px;
+  }
+  .btn-ghost:hover { background: rgba(96,165,250,0.22); }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+
+  /* HUD */
+  .hud { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .pill {
+    background: rgba(4,12,30,0.6); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; font-weight: 700; color: var(--muted);
+  }
+  .pill b { color: var(--ink); }
+  .pill.score b { color: var(--accent); }
+
+  /* message panels */
+  .panel-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .cipher-txt, .decoded-txt {
+    font-family: "SFMono-Regular", ui-monospace, Consolas, "Courier New", monospace;
+    font-size: clamp(15px, 4.6vw, 22px); font-weight: 700; letter-spacing: 2px;
+    word-break: break-word; line-height: 1.6;
+  }
+  .cipher-box {
+    background: rgba(4,12,30,0.6); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; color: #ffd27d; margin-bottom: 12px;
+  }
+  .decoded-box {
+    background: rgba(4,12,30,0.45); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; color: var(--ink); margin-bottom: 14px; transition: border-color .25s, box-shadow .25s;
+  }
+  .decoded-box.match { border-color: var(--ok); box-shadow: 0 0 0 2px rgba(52,211,153,0.35), 0 0 26px rgba(52,211,153,0.25); }
+  .decoded-box.match .decoded-txt { color: var(--ok); }
+
+  /* wheel + controls layout */
+  .play-grid { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: center; }
+  @media (max-width: 620px) { .play-grid { grid-template-columns: 1fr; justify-items: center; } }
+  .wheel-wrap { position: relative; width: 220px; height: 220px; }
+  svg.wheel { width: 220px; height: 220px; display: block; }
+  #gInner { transition: transform .28s cubic-bezier(.34,1.4,.5,1); transform-box: fill-box; }
+  .pointer { fill: var(--accent); }
+  .controls { width: 100%; max-width: 380px; }
+  .map-line {
+    text-align: center; font-family: ui-monospace, Consolas, monospace; font-weight: 800;
+    font-size: 18px; margin-bottom: 10px; color: var(--muted);
+  }
+  .map-line b { color: var(--accent); font-size: 22px; }
+  .shift-row { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; }
+  .wheelbtn {
+    width: 52px; height: 52px; border-radius: 14px; font-size: 26px; flex: 0 0 auto;
+    background: rgba(96,165,250,0.14); color: var(--accent); border: 1px solid var(--line);
+  }
+  .wheelbtn:hover { background: rgba(96,165,250,0.26); }
+  .shift-val { flex: 1; text-align: center; }
+  .shift-val .n { font-size: 34px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .shift-val .k { font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  input[type=range] { width: 100%; margin: 12px 0 2px; accent-color: var(--accent); height: 26px; }
+  .hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 4px; }
+  .decode-row { margin-top: 16px; text-align: center; }
+  #decodeBtn.ready { animation: glow 1.1s ease-in-out infinite; }
+  @keyframes glow {
+    0%,100% { box-shadow: 0 10px 26px rgba(52,211,153,0.35); }
+    50% { box-shadow: 0 10px 34px rgba(52,211,153,0.85); }
+  }
+
+  /* win screen */
+  .big-score { font-size: 54px; font-weight: 900; color: var(--accent); line-height: 1; margin: 6px 0; }
+  .toy { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .toy input[type=text] {
+    font-family: inherit; font-size: 15px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); background: rgba(4,12,30,0.6); color: var(--ink); width: 60%; letter-spacing: 1px;
+  }
+  .toy .out {
+    font-family: ui-monospace, Consolas, monospace; font-size: 18px; font-weight: 800;
+    color: #ffd27d; margin-top: 10px; word-break: break-word; min-height: 22px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- START SCREEN -->
+  <section id="startScreen" class="card center">
+    <div class="tag">Top Secret · Clearance Level Blue</div>
+    <h1><span class="glyph">◎</span> Cipher Crack</h1>
+    <p class="lead">Intercepted transmissions are scrambled. Turn the decoder ring, break the code, become the agent.</p>
+    <div class="concept">
+      <b>The idea:</b> A <b>Caesar cipher</b> hides a message by shifting every letter forward
+      in the alphabet (Julius Caesar really used this!). If A becomes D, the shift is 3.
+      To <b>decrypt</b>, you shift the letters back until the words appear.
+    </div>
+    <ul class="how">
+      <li>Each mission shows a <b>scrambled</b> message.</li>
+      <li>Turn the ring with <b>–</b> / <b>+</b> or the slider (0–25).</li>
+      <li>The decode updates live. When it reads clearly, hit <b>DECODE!</b></li>
+      <li>Crack it in fewer turns for a bigger bonus.</li>
+    </ul>
+    <div style="margin-top:16px"><button id="startBtn" class="btn-primary">▶ Start Mission</button></div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="gameScreen" class="card hidden">
+    <div class="hud">
+      <span class="pill">Mission <b id="lvlNum">1</b>/<b id="lvlTotal">8</b></span>
+      <span class="pill score">Score <b id="score">0</b></span>
+      <span class="pill">Best <b id="best">0</b></span>
+    </div>
+
+    <div class="panel-label">Intercepted (encrypted)</div>
+    <div class="cipher-box"><div id="cipherTxt" class="cipher-txt"></div></div>
+
+    <div class="panel-label">Your decode</div>
+    <div id="decodedBox" class="decoded-box"><div id="decodedTxt" class="decoded-txt"></div></div>
+
+    <div class="play-grid">
+      <div class="wheel-wrap">
+        <svg class="wheel" viewBox="0 0 220 220" aria-hidden="true">
+          <circle cx="110" cy="110" r="106" fill="rgba(4,12,30,0.55)" stroke="var(--line)" stroke-width="1.5"/>
+          <circle cx="110" cy="110" r="72" fill="none" stroke="rgba(96,165,250,0.35)" stroke-width="1"/>
+          <circle cx="110" cy="110" r="40" fill="rgba(96,165,250,0.08)" stroke="var(--line)" stroke-width="1"/>
+          <g id="gOuter"></g>
+          <g id="gInner"></g>
+          <polygon class="pointer" points="110,2 104,16 116,16"/>
+          <text x="110" y="116" text-anchor="middle" font-size="11" fill="#8ea6cf" letter-spacing="1">SHIFT</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="map-line">Cipher <b id="mapFrom">A</b> → decodes to <b id="mapTo">A</b></div>
+        <div class="shift-row">
+          <button class="wheelbtn" id="minusBtn" aria-label="shift down">–</button>
+          <div class="shift-val"><div class="n" id="shiftN">0</div><div class="k">shift back</div></div>
+          <button class="wheelbtn" id="plusBtn" aria-label="shift up">+</button>
+        </div>
+        <input type="range" id="shiftRange" min="0" max="25" value="0" />
+        <div class="hint">Turns used this mission: <b id="turns">0</b></div>
+      </div>
+    </div>
+
+    <div class="decode-row">
+      <button id="decodeBtn" class="btn-primary">DECODE!</button>
+    </div>
+  </section>
+
+  <!-- WIN SCREEN -->
+  <section id="winScreen" class="card center hidden">
+    <div class="tag">Mission Dossier · Complete</div>
+    <h1>🕵️ All Codes Cracked!</h1>
+    <p class="lead">Outstanding work, Agent. Every transmission decoded.</p>
+    <div class="big-score" id="finalScore">0</div>
+    <div class="pill" style="display:inline-block">Best: <b id="finalBest">0</b></div>
+    <div style="margin-top:18px"><button id="againBtn" class="btn-primary">↻ Play Again</button></div>
+
+    <div class="toy">
+      <div class="panel-label" style="text-align:center">Bonus toy · Encode your codename</div>
+      <div style="margin:8px 0">
+        <input type="text" id="nameIn" maxlength="16" placeholder="type a name" />
+      </div>
+      <div class="hint">Encoded with shift <b id="toyShift">3</b> (like Caesar himself)</div>
+      <div class="out" id="nameOut"></div>
+    </div>
+  </section>
+
+</div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SLUG = 'cipher-crack';
+  Arcade.mount({ title: 'Cipher Crack', accent: '#60a5fa' });
+
+  // ---- data: plaintext + the shift used to ENCRYPT it (computed in JS) -----
+  var MESSAGES = [
+    { text: 'WELL DONE AGENT',                          shift: 3  },
+    { text: 'CODES KEEP SECRETS SAFE',                  shift: 6  },
+    { text: 'COMPUTERS SPEAK IN ONES AND ZEROS',        shift: 8  },
+    { text: 'JULIUS CAESAR USED THIS CIPHER',           shift: 11 },
+    { text: 'A BYTE IS EIGHT BITS OF DATA',             shift: 14 },
+    { text: 'THE INTERNET SENDS ENCRYPTED MESSAGES',    shift: 17 },
+    { text: 'GREAT SPIES NEVER GIVE UP',                shift: 20 },
+    { text: 'MISSION COMPLETE STAY SHARP AGENT',        shift: 22 }
+  ];
+
+  var A = 'A'.charCodeAt(0);
+  // shift a single string of letters by n (wraps, leaves non-letters alone)
+  function shiftStr(str, n) {
+    n = ((n % 26) + 26) % 26;
+    var out = '';
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      if (c >= 65 && c <= 90) out += String.fromCharCode(A + (c - A + n) % 26);
+      else out += str[i];
+    }
+    return out;
+  }
+  function encrypt(m) { return shiftStr(m.text, m.shift); }        // scramble forward
+  function decrypt(cipher, shift) { return shiftStr(cipher, -shift); } // shift back
+
+  // ---- element refs --------------------------------------------------------
+  var $ = function (id) { return document.getElementById(id); };
+  var startScreen = $('startScreen'), gameScreen = $('gameScreen'), winScreen = $('winScreen');
+  var cipherTxt = $('cipherTxt'), decodedTxt = $('decodedTxt'), decodedBox = $('decodedBox');
+  var shiftRange = $('shiftRange'), shiftN = $('shiftN'), turnsEl = $('turns');
+  var mapFrom = $('mapFrom'), mapTo = $('mapTo');
+  var decodeBtn = $('decodeBtn'), gInner = $('gInner'), gOuter = $('gOuter');
+  var scoreEl = $('score'), bestEl = $('best'), lvlNum = $('lvlNum');
+
+  // ---- build the decoder-ring letters (SVG) --------------------------------
+  var STEP = 360 / 26, CX = 110, CY = 110;
+  function ring(group, radius, color) {
+    for (var i = 0; i < 26; i++) {
+      var ang = (-90 + i * STEP) * Math.PI / 180;
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', (CX + radius * Math.cos(ang)).toFixed(1));
+      t.setAttribute('y', (CY + radius * Math.sin(ang)).toFixed(1));
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'central');
+      t.setAttribute('font-size', '11');
+      t.setAttribute('font-weight', '700');
+      t.setAttribute('font-family', 'ui-monospace, Consolas, monospace');
+      t.setAttribute('fill', color);
+      t.setAttribute('transform', 'rotate(' + (i * STEP) + ' ' +
+        (CX + radius * Math.cos(ang)).toFixed(1) + ' ' + (CY + radius * Math.sin(ang)).toFixed(1) + ')');
+      t.textContent = String.fromCharCode(A + i);
+      group.appendChild(t);
+    }
+  }
+  ring(gOuter, 92, '#ffd27d');   // fixed ciphertext ring (outer)
+  ring(gInner, 56, '#60a5fa');   // rotating plaintext ring (inner)
+
+  // ---- game state ----------------------------------------------------------
+  var idx = 0, shift = 0, turns = 0, score = 0, solved = false;
+  var TOTAL = MESSAGES.length;
+  $('lvlTotal').textContent = TOTAL;
+  bestEl.textContent = Arcade.best(SLUG);
+
+  function show(scr) {
+    [startScreen, gameScreen, winScreen].forEach(function (s) { s.classList.add('hidden'); });
+    scr.classList.remove('hidden');
+  }
+
+  function loadLevel() {
+    solved = false;
+    shift = 0; turns = 0;
+    var m = MESSAGES[idx];
+    cipherTxt.textContent = encrypt(m);
+    lvlNum.textContent = (idx + 1);
+    shiftRange.value = 0;
+    render();
+  }
+
+  function render() {
+    shiftN.textContent = shift;
+    turnsEl.textContent = turns;
+    // inner ring turns clockwise by `shift` steps -> under A sits (A - shift)
+    gInner.setAttribute('transform', 'rotate(' + (shift * STEP) + ' ' + CX + ' ' + CY + ')');
+    // A -> decoded-of-A mapping label
+    var decodedOfA = String.fromCharCode(A + ((26 - shift) % 26));
+    mapFrom.textContent = 'A';
+    mapTo.textContent = decodedOfA;
+    // live decode
+    var cipher = cipherTxt.textContent;
+    var decoded = decrypt(cipher, shift);
+    decodedTxt.textContent = decoded;
+    var matched = (decoded === MESSAGES[idx].text);
+    decodedBox.classList.toggle('match', matched);
+    decodeBtn.classList.toggle('ready', matched && !solved);
+  }
+
+  function setShift(v) {
+    v = Math.max(0, Math.min(25, v | 0));
+    if (v === shift) return;
+    shift = v;
+    shiftRange.value = v;
+    turns++;
+    SFX.play('tick');
+    render();
+  }
+
+  // ---- interactions --------------------------------------------------------
+  $('plusBtn').addEventListener('click', function () { setShift(shift + 1); });
+  $('minusBtn').addEventListener('click', function () { setShift(shift - 1); });
+  shiftRange.addEventListener('input', function () { setShift(parseInt(this.value, 10)); });
+
+  decodeBtn.addEventListener('click', function () {
+    if (solved) return;
+    var decoded = decrypt(cipherTxt.textContent, shift);
+    if (decoded !== MESSAGES[idx].text) {
+      SFX.play('wrong');
+      decodedBox.animate(
+        [{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }],
+        { duration: 220, iterations: 1 });
+      return;
+    }
+    // correct! score with an efficiency bonus (fewer turns = more points)
+    solved = true;
+    var minTurns = MESSAGES[idx].shift;                 // straight up from 0
+    var extra = Math.max(0, turns - minTurns);
+    var bonus = Math.max(0, 60 - extra * 8);
+    var gained = 100 + bonus;
+    score += gained;
+    scoreEl.textContent = score;
+    SFX.play('correct');
+    setTimeout(function () { SFX.play('coin'); }, 130);
+    decodeBtn.classList.remove('ready');
+
+    setTimeout(function () {
+      idx++;
+      if (idx >= TOTAL) { winGame(); }
+      else { SFX.play('whoosh'); loadLevel(); }
+    }, 850);
+  });
+
+  function winGame() {
+    SFX.play('win');
+    setTimeout(function () { SFX.play('fanfare'); }, 350);
+    var isNew = Arcade.best(SLUG, score);
+    $('finalScore').textContent = score;
+    $('finalBest').textContent = Arcade.best(SLUG);
+    show(winScreen);
+    Arcade.confetti();
+    if (isNew) setTimeout(function () { Arcade.confetti(); }, 700);
+  }
+
+  $('startBtn').addEventListener('click', function () {
+    SFX.play('start');
+    idx = 0; score = 0; scoreEl.textContent = 0;
+    bestEl.textContent = Arcade.best(SLUG);
+    show(gameScreen);
+    loadLevel();
+  });
+
+  $('againBtn').addEventListener('click', function () {
+    SFX.play('select');
+    idx = 0; score = 0; scoreEl.textContent = 0;
+    show(gameScreen);
+    loadLevel();
+  });
+
+  // ---- bonus toy: encode a codename with shift 3 ---------------------------
+  var nameIn = $('nameIn'), nameOut = $('nameOut');
+  nameIn.addEventListener('input', function () {
+    var v = this.value.toUpperCase();
+    nameOut.textContent = v ? shiftStr(v, 3) : '';
+    SFX.play('type');
+  });
+
+  // hover blips on the big buttons (mouse only; safe for touch)
+  [decodeBtn, $('startBtn'), $('againBtn')].forEach(function (b) {
+    b.addEventListener('mouseenter', function () { SFX.play('blip'); });
+  });
+})();
+</script>
+</body>
+</html>

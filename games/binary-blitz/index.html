@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Binary Blitz</title>
+<style>
+  :root {
+    --accent: #38bdf8;
+    --accent-dim: #0e7490;
+    --bg0: #05070f;
+    --bg1: #0b1226;
+    --panel: rgba(13, 22, 44, 0.72);
+    --ink: #e8f6ff;
+    --muted: #7d93b6;
+    --good: #34d399;
+    --bad: #f43f5e;
+    --mono: "SFMono-Regular", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 600px at 15% -10%, rgba(56,189,248,0.16), transparent 60%),
+      radial-gradient(900px 500px at 100% 110%, rgba(14,116,144,0.20), transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg0));
+    background-attachment: fixed;
+    min-height: 100%;
+    padding: 64px 14px 28px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+  /* faint circuit grid */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; z-index: -1; opacity: 0.35;
+    background-image:
+      linear-gradient(rgba(56,189,248,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(circle at 50% 40%, #000 40%, transparent 85%);
+  }
+  .wrap { width: 100%; max-width: 620px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid rgba(56,189,248,0.22);
+    border-radius: 20px;
+    padding: 22px 20px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+    backdrop-filter: blur(8px);
+  }
+  h1 {
+    font-size: clamp(30px, 8vw, 46px);
+    letter-spacing: 1px;
+    line-height: 1.02;
+    text-align: center;
+    background: linear-gradient(180deg, #eafcff, var(--accent));
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 30px rgba(56,189,248,0.25);
+  }
+  .tag { text-align: center; color: var(--accent); font-family: var(--mono); font-size: 13px; letter-spacing: 3px; margin-bottom: 6px; }
+  .lead { text-align: center; color: var(--muted); margin: 14px auto 0; max-width: 460px; line-height: 1.5; font-size: 15px; }
+  .how {
+    margin: 18px auto 0; max-width: 460px;
+    display: grid; gap: 8px;
+  }
+  .how li { list-style: none; display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: #cfe3ff; }
+  .how b { color: var(--accent); font-family: var(--mono); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-weight: 800; font-size: 17px; letter-spacing: 0.5px;
+    color: #041016; cursor: pointer; border: none;
+    background: linear-gradient(180deg, #7fd8ff, var(--accent));
+    padding: 15px 30px; border-radius: 999px;
+    box-shadow: 0 10px 26px rgba(56,189,248,0.35);
+    transition: transform 0.08s ease, box-shadow 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:hover { box-shadow: 0 12px 32px rgba(56,189,248,0.55); }
+  .btn:active { transform: translateY(2px) scale(0.98); }
+  .center { text-align: center; margin-top: 22px; }
+
+  /* ---- HUD ---- */
+  .hud {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .stat { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .stat b { color: var(--ink); font-size: 18px; }
+  .lives { font-size: 18px; letter-spacing: 2px; }
+
+  .timerbar { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-bottom: 18px; border: 1px solid rgba(56,189,248,0.2); }
+  .timerfill { height: 100%; width: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), #a5f3fc); transition: width 0.12s linear; }
+  .timerfill.low { background: linear-gradient(90deg, #f43f5e, #fb923c); }
+
+  .target-box { text-align: center; margin-bottom: 8px; }
+  .target-label { font-family: var(--mono); color: var(--muted); font-size: 12px; letter-spacing: 3px; }
+  .target-num {
+    font-family: var(--mono); font-weight: 800;
+    font-size: clamp(52px, 16vw, 92px); line-height: 1;
+    color: #fff; text-shadow: 0 0 34px rgba(56,189,248,0.5);
+  }
+
+  .readout {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin: 10px 0 20px; flex-wrap: wrap;
+  }
+  .binstr { font-family: var(--mono); font-size: clamp(20px, 6vw, 30px); letter-spacing: 3px; color: var(--accent); }
+  .total {
+    font-family: var(--mono); font-size: 16px; color: var(--muted);
+    padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12);
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .total b { color: var(--ink); font-size: 20px; }
+  .total.over { color: var(--bad); border-color: rgba(244,63,94,0.5); }
+  .total.match { color: var(--good); border-color: rgba(52,211,153,0.6); background: rgba(52,211,153,0.1); }
+
+  /* ---- switches ---- */
+  .switches {
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px;
+  }
+  .bit {
+    position: relative; cursor: pointer; user-select: none;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 2px 10px; border-radius: 12px;
+    background: rgba(8,14,30,0.7);
+    border: 1px solid rgba(125,147,182,0.25);
+    transition: transform 0.08s ease, border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bit .place { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .bit .val {
+    font-family: var(--mono); font-weight: 800;
+    font-size: clamp(20px, 6vw, 30px); color: #45608a;
+    transition: color 0.15s, text-shadow 0.15s;
+  }
+  .bit:active { transform: translateY(2px); }
+  .bit.on {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, rgba(56,189,248,0.25), rgba(56,189,248,0.06));
+    box-shadow: 0 0 18px rgba(56,189,248,0.4), inset 0 0 12px rgba(56,189,248,0.15);
+  }
+  .bit.on .val { color: #eafcff; text-shadow: 0 0 14px rgba(56,189,248,0.9); }
+  .bit.on .place { color: var(--accent); }
+
+  .hint {
+    margin-top: 18px; text-align: center; color: var(--muted);
+    font-size: 13px; line-height: 1.5;
+  }
+  .hint code { font-family: var(--mono); color: var(--accent); }
+
+  .flash-toast {
+    position: fixed; left: 50%; top: 30%; transform: translateX(-50%);
+    font-family: var(--mono); font-weight: 800; font-size: clamp(24px, 8vw, 40px);
+    color: var(--good); text-shadow: 0 0 24px rgba(52,211,153,0.6);
+    pointer-events: none; opacity: 0; z-index: 50;
+  }
+  .flash-toast.show { animation: pop 0.9s ease forwards; }
+  @keyframes pop {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+    25% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+    70% { opacity: 1; transform: translateX(-50%) scale(1); }
+    100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-30px); }
+  }
+
+  .hidden { display: none !important; }
+
+  .over-stats { display: flex; justify-content: center; gap: 28px; margin: 18px 0 4px; }
+  .over-stats .stat b { display: block; font-size: 34px; color: var(--accent); font-family: var(--mono); }
+  .over-stats .stat span { color: var(--muted); font-size: 13px; letter-spacing: 1px; }
+  .shake { animation: shake 0.4s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); } 40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); } 80% { transform: translateX(5px); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- START -->
+  <section id="start" class="card">
+    <div class="tag">01000010 01000010</div>
+    <h1>Binary Blitz</h1>
+    <p class="lead">Computers count using only <b style="color:var(--accent)">0</b> and <b style="color:var(--accent)">1</b>. Each switch is a <b style="color:var(--accent)">bit</b> with a place value — flip the right ones to build the number!</p>
+    <ul class="how">
+      <li><b>1.</b> A target number appears. Flip the bit-switches ON (1) or OFF (0).</li>
+      <li><b>2.</b> Place values are <b>128 64 32 16 8 4 2 1</b>. An ON bit adds its value.</li>
+      <li><b>3.</b> Make the running total equal the target before time runs out.</li>
+      <li><b>4.</b> Be fast &amp; build streaks for bonus points. 3 lives — good luck!</li>
+    </ul>
+    <div class="center"><button id="startBtn" class="btn">▶ Start</button></div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="card hidden">
+    <div class="hud">
+      <div class="stat">SCORE <b id="score">0</b></div>
+      <div class="lives" id="lives">❤️❤️❤️</div>
+      <div class="stat">BEST <b id="best">0</b></div>
+    </div>
+    <div class="timerbar"><div id="timerfill" class="timerfill"></div></div>
+
+    <div class="target-box">
+      <div class="target-label">MAKE THIS NUMBER</div>
+      <div class="target-num" id="target">0</div>
+    </div>
+
+    <div class="readout">
+      <div class="binstr" id="binstr">0000 0000</div>
+      <div class="total" id="total">total <b>0</b></div>
+    </div>
+
+    <div class="switches" id="switches"></div>
+
+    <p class="hint">Tip: turning on a switch <b>adds</b> its place value. e.g. <code>0000 1010</code> = 8 + 2 = <code>10</code></p>
+  </section>
+
+  <!-- GAME OVER -->
+  <section id="over" class="card hidden">
+    <div class="tag">SYSTEM HALT</div>
+    <h1>Game Over</h1>
+    <div class="over-stats">
+      <div class="stat"><b id="finalScore">0</b><span>SCORE</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>BEST</span></div>
+      <div class="stat"><b id="finalSolved">0</b><span>SOLVED</span></div>
+    </div>
+    <p class="lead" id="overMsg">Nice run!</p>
+    <div class="center"><button id="againBtn" class="btn">↻ Play Again</button></div>
+  </section>
+
+</div>
+
+<div id="toast" class="flash-toast"></div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function () {
+  "use strict";
+  var SLUG = "binary-blitz";
+  Arcade.mount({ title: "Binary Blitz", accent: "#38bdf8" });
+
+  // ---- element refs ----
+  var $ = function (id) { return document.getElementById(id); };
+  var startScreen = $("start"), gameScreen = $("game"), overScreen = $("over");
+  var scoreEl = $("score"), bestEl = $("best"), livesEl = $("lives");
+  var targetEl = $("target"), binEl = $("binstr"), totalEl = $("total");
+  var timerFill = $("timerfill"), switchesEl = $("switches"), toast = $("toast");
+
+  var PLACES = [128, 64, 32, 16, 8, 4, 2, 1];
+  var ROUND_MS = 20000;
+
+  // ---- state ----
+  var bits, score, lives, solved, streak, target;
+  var timeLeft, rafId, roundStart, locked;
+
+  bestEl.textContent = Arcade.best(SLUG);
+
+  // build 8 switches once
+  var bitEls = [];
+  PLACES.forEach(function (p, i) {
+    var d = document.createElement("div");
+    d.className = "bit";
+    d.innerHTML = '<span class="place">' + p + '</span><span class="val">0</span>';
+    d.addEventListener("click", function () { toggle(i); });
+    switchesEl.appendChild(d);
+    bitEls.push(d);
+  });
+
+  // ---- difficulty: max target grows with rounds solved ----
+  function maxForSolved(n) {
+    if (n < 3) return 15;     // 4 bits
+    if (n < 6) return 31;
+    if (n < 9) return 63;
+    if (n < 13) return 127;
+    return 255;               // full 8 bits
+  }
+
+  function newTarget() {
+    var max = maxForSolved(solved);
+    var min = solved < 3 ? 1 : Math.max(1, Math.floor(max / 4));
+    var t;
+    do { t = min + Math.floor(Math.random() * (max - min + 1)); }
+    while (t === value() && t === target); // avoid trivially already-set
+    target = t;
+    targetEl.textContent = t;
+  }
+
+  function value() {
+    var v = 0;
+    for (var i = 0; i < 8; i++) if (bits[i]) v += PLACES[i];
+    return v;
+  }
+
+  function render() {
+    var s = "";
+    for (var i = 0; i < 8; i++) {
+      s += bits[i] ? "1" : "0";
+      if (i === 3) s += " ";
+      bitEls[i].classList.toggle("on", !!bits[i]);
+      bitEls[i].querySelector(".val").textContent = bits[i] ? "1" : "0";
+    }
+    binEl.textContent = s;
+    var v = value();
+    totalEl.innerHTML = "total <b>" + v + "</b>";
+    totalEl.classList.toggle("over", v > target);
+    totalEl.classList.toggle("match", v === target);
+  }
+
+  function toggle(i) {
+    if (locked) return;
+    bits[i] = bits[i] ? 0 : 1;
+    SFX.play("flip");
+    render();
+    if (value() === target) solve();
+  }
+
+  // ---- round timer ----
+  function tick() {
+    var elapsed = performance.now() - roundStart;
+    timeLeft = Math.max(0, ROUND_MS - elapsed);
+    var pct = (timeLeft / ROUND_MS) * 100;
+    timerFill.style.width = pct + "%";
+    timerFill.classList.toggle("low", pct < 30);
+    if (timeLeft <= 0) { timeUp(); return; }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startRound() {
+    locked = false;
+    bits = [0, 0, 0, 0, 0, 0, 0, 0];
+    newTarget();
+    render();
+    roundStart = performance.now();
+    timerFill.classList.remove("low");
+    timerFill.style.width = "100%";
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function solve() {
+    locked = true;
+    cancelAnimationFrame(rafId);
+    solved++;
+    streak++;
+    // scoring: base + speed bonus (up to 100) + streak bonus
+    var speedBonus = Math.round((timeLeft / ROUND_MS) * 100);
+    var streakBonus = (streak - 1) * 15;
+    var gained = 50 + speedBonus + streakBonus;
+    score += gained;
+    scoreEl.textContent = score;
+
+    if (streak >= 3) {
+      SFX.play("powerup");
+      Arcade.confetti();
+      showToast("STREAK ×" + streak + "  +" + gained, "#38bdf8");
+    } else {
+      SFX.play("coin");
+      SFX.play("correct");
+      showToast("+" + gained, "#34d399");
+    }
+
+    // brief pause so the player sees the match, then next round
+    setTimeout(startRound, 750);
+  }
+
+  function timeUp() {
+    locked = true;
+    cancelAnimationFrame(rafId);
+    streak = 0;
+    lives--;
+    paintLives();
+    SFX.play("wrong");
+    SFX.play("error");
+    gameScreen.classList.add("shake");
+    setTimeout(function () { gameScreen.classList.remove("shake"); }, 420);
+    showToast("TIME UP! was " + target, "#f43f5e");
+    if (lives <= 0) { setTimeout(gameOver, 900); }
+    else { setTimeout(startRound, 900); }
+  }
+
+  function paintLives() {
+    var s = "";
+    for (var i = 0; i < 3; i++) s += i < lives ? "❤️" : "🖤";
+    livesEl.textContent = s;
+  }
+
+  function showToast(txt, color) {
+    toast.textContent = txt;
+    toast.style.color = color;
+    toast.style.textShadow = "0 0 24px " + color;
+    toast.classList.remove("show");
+    void toast.offsetWidth; // restart animation
+    toast.classList.add("show");
+  }
+
+  // ---- game flow ----
+  function newGame() {
+    score = 0; lives = 3; solved = 0; streak = 0;
+    scoreEl.textContent = 0;
+    bestEl.textContent = Arcade.best(SLUG);
+    paintLives();
+    show(gameScreen);
+    SFX.play("start");
+    startRound();
+  }
+
+  function gameOver() {
+    cancelAnimationFrame(rafId);
+    var isBest = Arcade.best(SLUG, score);
+    $("finalScore").textContent = score;
+    $("finalBest").textContent = Arcade.best(SLUG);
+    $("finalSolved").textContent = solved;
+    $("overMsg").textContent = isBest
+      ? "New high score! You cracked " + solved + " numbers."
+      : "You cracked " + solved + " numbers. Try again!";
+    if (isBest && score > 0) { SFX.play("fanfare"); Arcade.confetti(); }
+    else { SFX.play("lose"); }
+    show(overScreen);
+  }
+
+  function show(section) {
+    [startScreen, gameScreen, overScreen].forEach(function (s) {
+      s.classList.toggle("hidden", s !== section);
+    });
+  }
+
+  $("startBtn").addEventListener("click", function () { SFX.play("select"); newGame(); });
+  $("againBtn").addEventListener("click", function () { SFX.play("select"); newGame(); });
+})();
+</script>
+</body>
+</html>

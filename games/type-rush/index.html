@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Type Rush</title>
+<style>
+  :root { --accent:#22d3ee; --accent2:#0ea5b7; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; }
+  body {
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    color:#c7f9ff;
+    background:radial-gradient(circle at 50% -10%, #08343b 0%, #041016 55%, #020509 100%);
+    padding-top:64px; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+  /* faint scanline / matrix grid overlay */
+  body::before {
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(34,211,238,.035) 0 1px, transparent 1px 3px);
+    opacity:.6;
+  }
+  #wrap { position:relative; z-index:1; height:calc(100vh - 64px); display:flex; flex-direction:column; padding:8px 10px 10px; }
+
+  /* HUD */
+  #hud {
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;
+    margin-bottom:8px;
+  }
+  .stat {
+    background:rgba(6,26,31,.75); border:1px solid rgba(34,211,238,.35);
+    border-radius:10px; padding:6px 12px; min-width:64px; text-align:center;
+    box-shadow:0 0 12px rgba(34,211,238,.08) inset;
+  }
+  .stat .lbl { font-size:10px; letter-spacing:2px; color:#5fe6f7; opacity:.8; text-transform:uppercase; }
+  .stat .val { font-size:20px; font-weight:700; color:#eafcff; text-shadow:0 0 8px rgba(34,211,238,.6); }
+  #lives .val { color:#ff6b81; text-shadow:0 0 8px rgba(255,107,129,.6); letter-spacing:2px; }
+
+  /* Play field */
+  #field {
+    position:relative; flex:1; min-height:200px; overflow:hidden;
+    border:1px solid rgba(34,211,238,.3); border-radius:14px;
+    background:linear-gradient(180deg, rgba(3,18,22,.55), rgba(2,8,11,.75));
+    box-shadow:0 0 40px rgba(34,211,238,.06) inset;
+  }
+  #field::after { /* danger zone at bottom */
+    content:""; position:absolute; left:0; right:0; bottom:0; height:46px;
+    background:linear-gradient(180deg, transparent, rgba(255,60,90,.22));
+    border-top:1px dashed rgba(255,90,120,.5); pointer-events:none;
+  }
+  .word {
+    position:absolute; white-space:nowrap; font-size:clamp(18px,3.4vw,30px); font-weight:700;
+    padding:4px 12px; border-radius:9px; letter-spacing:1px;
+    background:rgba(6,30,36,.85); border:1px solid rgba(34,211,238,.4);
+    color:#9fe9f5; text-shadow:0 0 6px rgba(34,211,238,.35);
+    transform:translateX(-50%); transition:transform .05s;
+  }
+  .word.active { border-color:var(--accent); box-shadow:0 0 18px rgba(34,211,238,.55); color:#eafcff; }
+  .word .hit { color:var(--accent); text-shadow:0 0 10px var(--accent); }
+  .word.pop { animation:pop .28s ease-out forwards; }
+  @keyframes pop { to { transform:translateX(-50%) scale(1.6); opacity:0; } }
+
+  /* typing bar */
+  #typebar {
+    margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px;
+    min-height:44px;
+  }
+  #prompt { color:var(--accent); font-weight:700; font-size:22px; text-shadow:0 0 8px var(--accent); }
+  #typed {
+    font-size:22px; font-weight:700; letter-spacing:2px; min-height:28px; color:#eafcff;
+  }
+  #caret { display:inline-block; width:10px; background:var(--accent); animation:blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity:0; } }
+  #hiddenInput { position:absolute; opacity:0; pointer-events:none; left:-9999px; }
+  .note { text-align:center; font-size:11px; color:#4bc4d6; opacity:.75; margin-top:4px; }
+
+  /* Overlays */
+  .overlay {
+    position:absolute; inset:0; z-index:5; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:14px; padding:18px;
+    background:rgba(2,8,11,.9); backdrop-filter:blur(3px); border-radius:14px;
+  }
+  .overlay.hidden { display:none; }
+  .title {
+    font-size:clamp(34px,8vw,60px); font-weight:800; letter-spacing:3px; color:#eafcff;
+    text-shadow:0 0 18px var(--accent); text-transform:uppercase;
+  }
+  .title .cy { color:var(--accent); }
+  .sub { max-width:520px; font-size:14px; line-height:1.6; color:#9fe0ea; }
+  .sub b { color:var(--accent); }
+  .concept {
+    font-size:13px; color:#7fd6e6; border-left:3px solid var(--accent);
+    padding:6px 12px; background:rgba(34,211,238,.06); border-radius:6px; max-width:520px; text-align:left;
+  }
+  .btn {
+    cursor:pointer; font-family:inherit; font-weight:800; letter-spacing:2px; font-size:16px;
+    color:#021316; background:var(--accent); border:none; border-radius:12px; padding:14px 34px;
+    text-transform:uppercase; box-shadow:0 6px 22px rgba(34,211,238,.4); transition:transform .08s;
+  }
+  .btn:hover { transform:translateY(-2px); }
+  .btn:active { transform:translateY(0); }
+  #finalScore { font-size:44px; font-weight:800; color:var(--accent); text-shadow:0 0 14px var(--accent); }
+  .fbrow { display:flex; gap:20px; font-size:14px; color:#9fe0ea; }
+  .fbrow b { color:#eafcff; font-size:18px; display:block; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="hud">
+    <div class="stat"><div class="lbl">Score</div><div class="val" id="score">0</div></div>
+    <div class="stat"><div class="lbl">Level</div><div class="val" id="level">1</div></div>
+    <div class="stat" id="lives"><div class="lbl">Lives</div><div class="val" id="livesVal">♥♥♥</div></div>
+    <div class="stat"><div class="lbl">WPM</div><div class="val" id="wpm">0</div></div>
+    <div class="stat"><div class="lbl">Best</div><div class="val" id="best">0</div></div>
+  </div>
+
+  <div id="field">
+    <!-- START overlay -->
+    <div class="overlay" id="startScreen">
+      <div class="title">Type&nbsp;<span class="cy">Rush</span></div>
+      <div class="sub">Tech words rain down the terminal. <b>Type a word exactly</b> before it hits the
+        red zone to zap it. Longer words = more points. Miss <b>3 words</b> and it's game over.
+        It gets faster every level!</div>
+      <div class="concept">Skill: fast, accurate <b>touch typing</b> — the core computer skill — while you
+        learn real tech vocabulary like <i>cache</i>, <i>router</i>, <i>binary</i> and <i>pixel</i>.</div>
+      <button class="btn" id="startBtn">▶ Start</button>
+      <div class="note">⌨️ A physical keyboard works best. On a phone, tap the field to pop the keyboard.</div>
+    </div>
+
+    <!-- GAME OVER overlay -->
+    <div class="overlay hidden" id="overScreen">
+      <div class="title" style="font-size:clamp(28px,7vw,48px)">Game&nbsp;<span class="cy">Over</span></div>
+      <div id="finalScore">0</div>
+      <div class="fbrow">
+        <div>Words zapped<b id="finalWords">0</b></div>
+        <div>Best WPM<b id="finalWpm">0</b></div>
+        <div>Best score<b id="finalBest">0</b></div>
+      </div>
+      <button class="btn" id="againBtn">↻ Play Again</button>
+    </div>
+  </div>
+
+  <div id="typebar">
+    <span id="prompt">&gt;</span>
+    <span id="typed"></span><span id="caret">&nbsp;</span>
+  </div>
+  <div class="note">Type the highlighted word — Backspace fixes typos.</div>
+  <input id="hiddenInput" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+</div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function () {
+  'use strict';
+  var SLUG = 'type-rush';
+  Arcade.mount({ title: 'Type Rush', accent: '#22d3ee' });
+
+  // ---- word bank: CS / computer vocabulary (all lowercase) ----------------
+  var BANK = [
+    'mouse','pixel','cache','router','binary','byte','cursor','upload','laptop','folder',
+    'python','cloud','server','cookie','pixelate','modem','kernel','syntax','buffer','packet',
+    'bug','loop','array','stack','queue','login','logout','browser','desktop','network',
+    'monitor','keyboard','printer','scanner','battery','memory','storage','backup','firewall','malware',
+    'password','username','download','database','encrypt','decode','compile','debug','virus','wifi',
+    'bluetooth','ethernet','pointer','boolean','integer','string','object','function','variable','output',
+    'input','screen','webpage','browser','hardware','software','graphics','emoji','avatar','gigabyte'
+  ];
+
+  // ---- DOM refs -----------------------------------------------------------
+  var field = document.getElementById('field');
+  var $score = document.getElementById('score');
+  var $level = document.getElementById('level');
+  var $livesVal = document.getElementById('livesVal');
+  var $wpm = document.getElementById('wpm');
+  var $best = document.getElementById('best');
+  var $typed = document.getElementById('typed');
+  var input = document.getElementById('hiddenInput');
+  var startScreen = document.getElementById('startScreen');
+  var overScreen = document.getElementById('overScreen');
+
+  // ---- state --------------------------------------------------------------
+  var words = [];        // active falling words
+  var running = false;
+  var score = 0, lives = 3, level = 1, cleared = 0;
+  var correctChars = 0, bestWpm = 0, startTime = 0;
+  var lastFrame = 0, spawnTimer = 0;
+  var used = [];         // avoid duplicate on-screen words
+
+  $best.textContent = Arcade.best(SLUG);
+
+  // level tuning
+  function fallSpeed() { return 26 + (level - 1) * 7; }        // px / second
+  function spawnInterval() { return Math.max(750, 2100 - (level - 1) * 150); } // ms
+
+  function pickWord() {
+    var w, tries = 0;
+    do { w = BANK[(Math.random() * BANK.length) | 0]; tries++; }
+    while (used.indexOf(w) !== -1 && tries < 12);
+    return w;
+  }
+
+  function spawn() {
+    var text = pickWord();
+    used.push(text);
+    var el = document.createElement('div');
+    el.className = 'word';
+    el.textContent = text;
+    field.appendChild(el);
+    // random horizontal position, keep away from edges
+    var x = 12 + Math.random() * 76;
+    el.style.left = x + '%';
+    words.push({ el: el, text: text, y: -34, x: x });
+    positionWord(words[words.length - 1]);
+  }
+
+  function positionWord(w) { w.el.style.top = w.y + 'px'; }
+
+  // find the target word: nearest-to-bottom word whose text starts with typed
+  function targetFor(typed) {
+    if (!typed) return null;
+    var best = null;
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      if (w.text.indexOf(typed) === 0) {
+        if (!best || w.y > best.y) best = w;
+      }
+    }
+    return best;
+  }
+
+  // redraw highlight + typed display
+  function refresh() {
+    var typed = input.value.toLowerCase();
+    $typed.textContent = typed;
+    var target = targetFor(typed);
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i];
+      var on = (w === target);
+      w.el.classList.toggle('active', on);
+      if (on && typed) {
+        w.el.innerHTML = '<span class="hit">' + typed + '</span>' + w.text.slice(typed.length);
+      } else {
+        w.el.textContent = w.text;
+      }
+    }
+    return target;
+  }
+
+  function clearWord(w) {
+    var idx = words.indexOf(w);
+    if (idx === -1) return;
+    words.splice(idx, 1);
+    var u = used.indexOf(w.text); if (u !== -1) used.splice(u, 1);
+    w.el.textContent = w.text;
+    w.el.classList.add('pop');
+    (function (node) { setTimeout(function () { node.remove(); }, 300); })(w.el);
+  }
+
+  function loseWord(w) {
+    var idx = words.indexOf(w);
+    if (idx === -1) return;
+    words.splice(idx, 1);
+    var u = used.indexOf(w.text); if (u !== -1) used.splice(u, 1);
+    w.el.remove();
+    lives--;
+    $livesVal.textContent = lives > 0 ? '♥'.repeat(lives) : '—';
+    field.animate ? field.animate(
+      [{ boxShadow:'0 0 0 3px rgba(255,60,90,.7) inset' }, { boxShadow:'0 0 40px rgba(34,211,238,.06) inset' }],
+      { duration: 350 }) : 0;
+    SFX.play('wrong'); SFX.play('error');
+    if (lives <= 0) gameOver();
+  }
+
+  // ---- typing input -------------------------------------------------------
+  input.addEventListener('input', function () {
+    if (!running) return;
+    var typed = input.value.toLowerCase();
+    if (typed === '') { refresh(); return; }
+    // exact match on the current target? zap it.
+    var target = refresh();
+    if (target && target.text === typed) {
+      SFX.play('type'); SFX.play('coin');
+      if (target.text.length >= 8) SFX.play('correct');
+      clearWord(target);
+      var pts = target.text.length * 10 + level * 2;
+      score += pts;
+      correctChars += target.text.length;
+      cleared++;
+      $score.textContent = score;
+      input.value = ''; $typed.textContent = '';
+      refresh();
+      maybeLevelUp();
+    } else {
+      SFX.play('type');
+    }
+  });
+  // keep focus on the hidden input while playing
+  field.addEventListener('pointerdown', function () { if (running) input.focus(); });
+  window.addEventListener('keydown', function () { if (running) input.focus(); });
+
+  function maybeLevelUp() {
+    var nl = Math.floor(cleared / 8) + 1;
+    if (nl > level) {
+      level = nl; $level.textContent = level;
+      SFX.play('powerup');
+    }
+  }
+
+  // ---- main loop ----------------------------------------------------------
+  function frame(now) {
+    if (!running) return;
+    var dt = Math.min(0.05, (now - lastFrame) / 1000 || 0);
+    lastFrame = now;
+
+    // spawn
+    spawnTimer -= dt * 1000;
+    if (spawnTimer <= 0) { spawn(); spawnTimer = spawnInterval(); }
+
+    // fall
+    var floor = field.clientHeight - 30;
+    var sp = fallSpeed();
+    for (var i = words.length - 1; i >= 0; i--) {
+      var w = words[i];
+      w.y += sp * dt;
+      positionWord(w);
+      if (w.y >= floor) loseWord(w);
+    }
+
+    // live WPM (correct chars / 5 per minute)
+    var mins = (now - startTime) / 60000;
+    var wpm = mins > 0 ? Math.round((correctChars / 5) / mins) : 0;
+    if (wpm > bestWpm) bestWpm = wpm;
+    $wpm.textContent = wpm;
+
+    requestAnimationFrame(frame);
+  }
+
+  // ---- game flow ----------------------------------------------------------
+  function reset() {
+    words.forEach(function (w) { w.el.remove(); });
+    words = []; used = [];
+    score = 0; lives = 3; level = 1; cleared = 0;
+    correctChars = 0; bestWpm = 0;
+    $score.textContent = '0'; $level.textContent = '1';
+    $livesVal.textContent = '♥♥♥'; $wpm.textContent = '0';
+    input.value = ''; $typed.textContent = '';
+  }
+
+  function start() {
+    reset();
+    startScreen.classList.add('hidden');
+    overScreen.classList.add('hidden');
+    running = true;
+    startTime = performance.now();
+    lastFrame = startTime;
+    spawnTimer = 300;
+    SFX.play('start');
+    input.focus();
+    requestAnimationFrame(frame);
+  }
+
+  function gameOver() {
+    running = false;
+    SFX.play('lose');
+    var isBest = Arcade.best(SLUG, score);
+    var bestNow = Arcade.best(SLUG);
+    $best.textContent = bestNow;
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('finalWords').textContent = cleared;
+    document.getElementById('finalWpm').textContent = bestWpm;
+    document.getElementById('finalBest').textContent = bestNow;
+    overScreen.classList.remove('hidden');
+    if (isBest && score > 0) { SFX.play('fanfare'); Arcade.confetti(); }
+  }
+
+  document.getElementById('startBtn').addEventListener('click', function () { SFX.play('click'); start(); });
+  document.getElementById('againBtn').addEventListener('click', function () { SFX.play('click'); start(); });
+})();
+</script>
+</body>
+</html>

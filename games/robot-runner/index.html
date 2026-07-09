@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Runner</title>
+<style>
+  :root{
+    --accent:#f59e0b; --accent2:#fbbf24; --ink:#fef3c7; --muted:#c9b58a;
+    --bg0:#1c1408; --bg1:#2a1d0a; --panel:rgba(40,28,10,.72);
+    --line:rgba(245,158,11,.22); --wall:#4a3410; --good:#22c55e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink); min-height:100vh; padding:64px 14px 30px;
+    background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(245,158,11,.16), transparent 60%),
+      radial-gradient(900px 600px at 0% 110%, rgba(251,191,36,.10), transparent 55%),
+      linear-gradient(160deg,var(--bg0),var(--bg1));
+    background-attachment:fixed;
+  }
+  /* subtle blueprint grid */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
+    background-image:
+      linear-gradient(rgba(245,158,11,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(245,158,11,.05) 1px,transparent 1px);
+    background-size:34px 34px;
+  }
+  .wrap{max-width:940px;margin:0 auto}
+  header{text-align:center;margin:2px 0 16px}
+  h1{
+    margin:0;font-size:clamp(26px,6vw,40px);font-weight:900;letter-spacing:.5px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .concept{margin:6px auto 0;max-width:560px;font-size:14px;color:var(--muted);line-height:1.5}
+  .concept b{color:var(--accent2)}
+  .how{
+    margin:10px auto 0;max-width:600px;font-size:13px;color:var(--ink);
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 14px;
+  }
+  .game{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.35);backdrop-filter:blur(6px);
+  }
+  .left{flex:1 1 340px;max-width:470px;min-width:280px}
+  .right{flex:1 1 300px;max-width:400px;min-width:270px}
+  /* board */
+  .statusrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
+  .pill{font-weight:800;font-size:13px;background:rgba(245,158,11,.14);color:var(--accent2);
+    border:1px solid var(--line);border-radius:999px;padding:5px 12px;white-space:nowrap}
+  .boardwrap{display:flex;justify-content:center}
+  .board{position:relative;border-radius:12px;overflow:hidden;
+    background:#120c04;box-shadow:inset 0 0 0 2px rgba(245,158,11,.25)}
+  .cell{position:absolute;box-sizing:border-box;border:1px solid rgba(245,158,11,.10);
+    display:flex;align-items:center;justify-content:center;font-size:60%}
+  .cell.wall{background:
+      repeating-linear-gradient(45deg,var(--wall),var(--wall) 6px,#5a4014 6px,#5a4014 12px);
+    border-color:rgba(0,0,0,.4)}
+  .cell.goal{background:radial-gradient(circle,rgba(34,197,94,.25),transparent 70%)}
+  .robot{position:absolute;left:0;top:0;transition:transform .28s ease;
+    display:flex;align-items:center;justify-content:center;z-index:5;will-change:transform}
+  .robot .bot{filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))}
+  .facing{position:absolute;inset:0;transition:transform .25s ease;z-index:6}
+  .facing::before{content:"▲";position:absolute;top:-2%;left:50%;transform:translateX(-50%);
+    color:var(--accent2);font-size:44%;text-shadow:0 0 6px rgba(245,158,11,.8)}
+  .msg{margin-top:12px;min-height:22px;text-align:center;font-weight:700;font-size:14px;color:var(--muted)}
+  .msg.ok{color:var(--good)} .msg.bad{color:#f87171}
+  /* program list */
+  h2{margin:0 0 8px;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:var(--accent2)}
+  .program{min-height:74px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;
+    background:#160f05;border:1px dashed var(--line);border-radius:12px;padding:10px;margin-bottom:6px}
+  .program:empty::after{content:"Tap commands below to build your program…";color:#7a6a48;
+    font-size:13px;font-weight:600}
+  .step{display:inline-flex;align-items:center;gap:4px;font-weight:800;font-size:13px;
+    background:linear-gradient(180deg,#3a2810,#2a1c0a);border:1px solid var(--line);
+    border-radius:9px;padding:6px 9px;color:var(--ink);animation:pop .18s ease}
+  .step .rep{background:var(--accent);color:#3a2400;border-radius:6px;padding:1px 5px;font-size:11px}
+  .step.on{outline:2px solid var(--accent);box-shadow:0 0 12px rgba(245,158,11,.6)}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  .hint{font-size:12px;color:var(--accent2);min-height:16px;margin:2px 0 8px;font-weight:700}
+  /* buttons */
+  .cmds{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;
+    font-weight:800;transition:transform .08s,filter .15s;color:#2a1a04}
+  button:active{transform:translateY(2px)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .cmd{padding:14px 6px;font-size:15px;background:linear-gradient(180deg,var(--accent2),var(--accent));
+    box-shadow:0 4px 0 #92610a}
+  .cmd:active{box-shadow:0 1px 0 #92610a}
+  .rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .sec{background:#4a3410;color:var(--ink);padding:11px;font-size:13px;box-shadow:0 3px 0 #241800}
+  .reps{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .rep-btn{background:#5b3f13;color:var(--accent2);padding:10px;font-size:13px;box-shadow:0 3px 0 #241800}
+  .rep-btn.active{background:var(--accent);color:#2a1a04}
+  .run{width:100%;margin-top:12px;padding:16px;font-size:18px;
+    background:linear-gradient(180deg,#34d399,#16a34a);color:#04220f;box-shadow:0 5px 0 #0a5a2a}
+  .run:active{box-shadow:0 1px 0 #0a5a2a}
+  /* overlay */
+  .overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+    padding:20px;background:rgba(12,8,3,.86);backdrop-filter:blur(4px)}
+  .overlay.show{display:flex}
+  .card{max-width:420px;text-align:center;background:linear-gradient(160deg,#2a1c0a,#1c1408);
+    border:1px solid var(--accent);border-radius:20px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .card h2{font-size:26px;color:var(--accent2);text-transform:none;letter-spacing:0;margin-bottom:10px}
+  .card p{color:var(--muted);font-size:15px;line-height:1.6}
+  .score-big{font-size:44px;font-weight:900;color:var(--accent);margin:6px 0}
+  .card button{background:linear-gradient(180deg,var(--accent2),var(--accent));padding:14px 26px;
+    font-size:16px;margin-top:14px;box-shadow:0 4px 0 #92610a}
+  @media(max-width:720px){ .game{gap:12px} .left,.right{max-width:520px;width:100%} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🤖 Robot Runner</h1>
+    <p class="concept">An <b>algorithm</b> is just a list of steps in the right order.
+      Computers do <b>exactly</b> what you tell them — one step at a time. Guide the robot to the flag!</p>
+    <div class="how">📋 <b>How to play:</b> Tap commands to build a program, then press <b>RUN</b>.
+      The robot follows your steps in order. Reach 🚩 to win — crash and it resets so you can fix it.</div>
+  </header>
+
+  <div class="game">
+    <!-- BOARD -->
+    <section class="panel left">
+      <div class="statusrow">
+        <span class="pill" id="levelPill">Level 1 / 5</span>
+        <span class="pill" id="scorePill">Score 0</span>
+        <span class="pill" id="bestPill">Best 0</span>
+      </div>
+      <div class="boardwrap"><div class="board" id="board"></div></div>
+      <div class="msg" id="msg">Build your program, then press RUN ▶</div>
+    </section>
+
+    <!-- CONTROLS -->
+    <section class="panel right">
+      <h2>Your Program</h2>
+      <div class="program" id="program"></div>
+      <div class="hint" id="hint"></div>
+      <div class="cmds">
+        <button class="cmd" data-cmd="F">Move<br>Forward ⬆</button>
+        <button class="cmd" data-cmd="L">Turn<br>Left ↺</button>
+        <button class="cmd" data-cmd="R">Turn<br>Right ↻</button>
+      </div>
+      <div class="reps">
+        <button class="rep-btn" id="rep2">🔁 Repeat ×2</button>
+        <button class="rep-btn" id="rep3">🔁 Repeat ×3</button>
+      </div>
+      <div class="rowbtns">
+        <button class="sec" id="del">⌫ Delete Last</button>
+        <button class="sec" id="clr">🗑 Clear All</button>
+      </div>
+      <button class="run" id="run">▶ RUN</button>
+    </section>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"><div class="card" id="card"></div></div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function(){
+  'use strict';
+  var SLUG='robot-runner';
+  Arcade.mount({ title:'Robot Runner', accent:'#f59e0b' });
+
+  // dir: 0=up 1=right 2=down 3=left
+  var DIRS=[[-1,0],[0,1],[1,0],[0,-1]];
+
+  // Levels: n=grid size, start{r,c,d}, goal{r,c}, walls[[r,c]], par=min commands
+  var LEVELS=[
+    { n:5, start:{r:4,c:2,d:0}, goal:{r:0,c:2}, walls:[], par:4 },
+    { n:5, start:{r:4,c:0,d:0}, goal:{r:0,c:4}, walls:[[2,2],[3,2]], par:9 },
+    { n:6, start:{r:5,c:0,d:1}, goal:{r:0,c:5},
+      walls:[[2,2],[2,3],[3,2],[3,3],[1,1],[4,4]], par:11 },
+    { n:6, start:{r:5,c:0,d:0}, goal:{r:0,c:5},
+      walls:[[0,0],[0,1],[1,0],[1,1],[4,2],[3,4]], par:12 },
+    { n:7, start:{r:6,c:0,d:0}, goal:{r:0,c:6},
+      walls:[[0,0],[1,0],[2,0],[3,0],[6,3],[2,2],[3,3],[5,5],[1,2]], par:15 }
+  ];
+
+  var boardEl=document.getElementById('board');
+  var progEl=document.getElementById('program');
+  var msgEl=document.getElementById('msg');
+  var hintEl=document.getElementById('hint');
+  var overlay=document.getElementById('overlay');
+  var card=document.getElementById('card');
+
+  var lvl=0, program=[], pendingRep=1, running=false;
+  var robotEl=null, cell=0, boardPx=0;
+  var pos={r:0,c:0,d:0}, deg=0;
+  var totalScore=0, tries=0;
+
+  document.getElementById('bestPill').textContent='Best '+Arcade.best(SLUG);
+
+  // ---- build the board for current level ----
+  function buildBoard(){
+    var L=LEVELS[lvl], n=L.n;
+    var avail=Math.min(boardEl.parentElement.clientWidth||380, 440);
+    if(avail<200) avail=300;
+    cell=Math.floor(avail/n); boardPx=cell*n;
+    boardEl.style.width=boardPx+'px'; boardEl.style.height=boardPx+'px';
+    boardEl.innerHTML='';
+    var wallSet={}; L.walls.forEach(function(w){ wallSet[w[0]+','+w[1]]=1; });
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++){
+      var d=document.createElement('div'); d.className='cell';
+      d.style.width=cell+'px'; d.style.height=cell+'px';
+      d.style.left=(c*cell)+'px'; d.style.top=(r*cell)+'px';
+      d.style.fontSize=(cell*0.6)+'px';
+      if(wallSet[r+','+c]) d.className+=' wall';
+      if(r===L.goal.r && c===L.goal.c){ d.className+=' goal'; d.textContent='🚩'; }
+      boardEl.appendChild(d);
+    }
+    // robot overlay
+    robotEl=document.createElement('div'); robotEl.className='robot';
+    robotEl.style.width=cell+'px'; robotEl.style.height=cell+'px';
+    robotEl.style.fontSize=(cell*0.6)+'px';
+    robotEl.innerHTML='<div class="facing"></div><span class="bot">🤖</span>';
+    boardEl.appendChild(robotEl);
+    resetRobot(true);
+  }
+
+  function resetRobot(snap){
+    var L=LEVELS[lvl];
+    pos={r:L.start.r,c:L.start.c,d:L.start.d};
+    deg=L.start.d*90;
+    if(snap) robotEl.style.transition='none';
+    placeRobot();
+    if(snap){ robotEl.offsetHeight; robotEl.style.transition=''; }
+  }
+  function placeRobot(){
+    robotEl.style.transform='translate('+(pos.c*cell)+'px,'+(pos.r*cell)+'px)';
+    robotEl.querySelector('.facing').style.transform='rotate('+deg+'deg)';
+  }
+
+  // ---- program editing ----
+  function renderProgram(){
+    progEl.innerHTML='';
+    var labels={F:'Forward ⬆',L:'Left ↺',R:'Right ↻'};
+    program.forEach(function(step,i){
+      var s=document.createElement('span'); s.className='step'; s.dataset.i=i;
+      s.innerHTML=(step.rep>1?'<span class="rep">'+step.rep+'×</span>':'')+labels[step.cmd];
+      progEl.appendChild(s);
+    });
+    var pills=program.length;
+    document.getElementById('scorePill').textContent='Score '+totalScore;
+  }
+  function setHint(t){ hintEl.textContent=t||''; }
+
+  function addCmd(cmd){
+    if(running) return;
+    program.push({cmd:cmd, rep:pendingRep});
+    if(pendingRep>1){ pendingRep=1; clearRepUI(); setHint(''); }
+    SFX.play('click');
+    renderProgram();
+  }
+  function clearRepUI(){
+    document.getElementById('rep2').classList.remove('active');
+    document.getElementById('rep3').classList.remove('active');
+  }
+
+  // ---- running the program ----
+  function run(){
+    if(running || program.length===0) return;
+    running=true; setBtns(false); msg('Running your program…','');
+    resetRobot(true);
+    // flatten into single-step ops
+    var ops=[];
+    program.forEach(function(s){ for(var k=0;k<s.rep;k++) ops.push(s.cmd); });
+    SFX.play('start');
+    var i=0;
+    (function next(){
+      if(i>=ops.length){ finishRun(); return; }
+      highlightStep(i, ops);
+      doOp(ops[i], function(crashed){
+        if(crashed){ crash(); return; }
+        i++; setTimeout(next, 360);
+      });
+    })();
+  }
+
+  function doOp(op, cb){
+    if(op==='L'||op==='R'){
+      pos.d=((pos.d+(op==='R'?1:3))%4+4)%4;
+      deg+=(op==='R'?90:-90);
+      SFX.play('flip');
+      placeRobot();
+      setTimeout(function(){ cb(false); }, 260);
+    } else { // forward
+      var L=LEVELS[lvl];
+      var nr=pos.r+DIRS[pos.d][0], nc=pos.c+DIRS[pos.d][1];
+      var wall=L.walls.some(function(w){ return w[0]===nr && w[1]===nc; });
+      if(nr<0||nc<0||nr>=L.n||nc>=L.n||wall){ SFX.play('error'); cb(true); return; }
+      pos.r=nr; pos.c=nc;
+      SFX.play('step'); SFX.play('move');
+      placeRobot();
+      setTimeout(function(){ cb(false); }, 300);
+    }
+  }
+
+  function highlightStep(opIndex, ops){
+    // map flat op index back to a program pill
+    var count=0, target=0;
+    for(var p=0;p<program.length;p++){ count+=program[p].rep; if(opIndex<count){ target=p; break; } }
+    var steps=progEl.children;
+    for(var s=0;s<steps.length;s++) steps[s].classList.toggle('on', s===target);
+  }
+
+  function crash(){
+    running=false; setBtns(true); tries++;
+    [].forEach.call(progEl.children,function(s){ s.classList.remove('on'); });
+    SFX.play('wrong');
+    msg('💥 Crashed! The robot did exactly what you said. Fix the steps and RUN again.','bad');
+    setTimeout(function(){ resetRobot(true); }, 500);
+  }
+
+  function finishRun(){
+    running=false; setBtns(true);
+    [].forEach.call(progEl.children,function(s){ s.classList.remove('on'); });
+    var L=LEVELS[lvl];
+    if(pos.r===L.goal.r && pos.c===L.goal.c){ winLevel(); }
+    else {
+      tries++; SFX.play('wrong');
+      msg('Program finished but not at the flag 🚩. Add more steps!','bad');
+      setTimeout(function(){ resetRobot(true); }, 500);
+    }
+  }
+
+  function winLevel(){
+    var L=LEVELS[lvl];
+    var pills=program.length;
+    var raw=Math.round(100*L.par/Math.max(L.par,pills));
+    var pts=Math.max(10, raw-10*tries);
+    totalScore+=pts;
+    SFX.play('coin'); SFX.play('win');
+    Arcade.confetti();
+    msg('✅ Reached the flag! +'+pts+' points','ok');
+    renderProgram();
+    if(lvl>=LEVELS.length-1){ setTimeout(gameOver, 900); }
+    else { setTimeout(nextLevelPrompt, 700); }
+  }
+
+  function nextLevelPrompt(){
+    SFX.play('fanfare');
+    show('🎉 Level '+(lvl+1)+' Cleared!',
+      '<p>Nice sequencing! Ready for a trickier maze?</p><div class="score-big">'+totalScore+'</div><p>total points</p>',
+      'Next Level ▶', function(){
+        hide(); lvl++; program=[]; pendingRep=1; tries=0; clearRepUI(); setHint('');
+        renderProgram(); buildBoard();
+        document.getElementById('levelPill').textContent='Level '+(lvl+1)+' / '+LEVELS.length;
+        msg('New maze! Build your program, then RUN ▶','');
+      });
+  }
+
+  function gameOver(){
+    var isBest=Arcade.best(SLUG, totalScore);
+    var best=Arcade.best(SLUG);
+    document.getElementById('bestPill').textContent='Best '+best;
+    SFX.play('fanfare'); Arcade.confetti(2200);
+    show('🏆 All Mazes Solved!',
+      '<p>You wrote 5 working algorithms — the robot followed every step in order!</p>'+
+      '<div class="score-big">'+totalScore+'</div><p>final score'+
+      (isBest?' · 🌟 New Best!':(' · Best '+best))+'</p>',
+      '↺ Play Again', function(){
+        hide(); lvl=0; program=[]; pendingRep=1; tries=0; totalScore=0; clearRepUI(); setHint('');
+        document.getElementById('levelPill').textContent='Level 1 / '+LEVELS.length;
+        renderProgram(); buildBoard(); msg('Build your program, then press RUN ▶','');
+      });
+  }
+
+  // ---- ui helpers ----
+  function msg(t,cls){ msgEl.textContent=t; msgEl.className='msg'+(cls?' '+cls:''); }
+  function setBtns(on){
+    document.querySelectorAll('.cmd,.rep-btn,#del,#clr,#run').forEach(function(b){ b.disabled=!on; });
+  }
+  function show(title,html,btn,fn){
+    card.innerHTML='<h2>'+title+'</h2>'+html;
+    var b=document.createElement('button'); b.textContent=btn;
+    b.onclick=function(){ SFX.play('button'); fn(); };
+    card.appendChild(b); overlay.classList.add('show');
+  }
+  function hide(){ overlay.classList.remove('show'); }
+
+  // ---- wire controls ----
+  document.querySelectorAll('.cmd').forEach(function(b){
+    b.addEventListener('click',function(){ addCmd(b.dataset.cmd); });
+  });
+  document.getElementById('rep2').addEventListener('click',function(){ setRep(2,this); });
+  document.getElementById('rep3').addEventListener('click',function(){ setRep(3,this); });
+  function setRep(n,btn){
+    if(running) return;
+    clearRepUI();
+    if(pendingRep===n){ pendingRep=1; setHint(''); SFX.play('blip'); return; }
+    pendingRep=n; btn.classList.add('active'); SFX.play('blip');
+    setHint('🔁 Next command will repeat ×'+n);
+  }
+  document.getElementById('del').addEventListener('click',function(){
+    if(running||!program.length) return; program.pop(); SFX.play('tick'); renderProgram();
+  });
+  document.getElementById('clr').addEventListener('click',function(){
+    if(running||!program.length) return; program=[]; pendingRep=1; clearRepUI(); setHint('');
+    SFX.play('whoosh'); renderProgram();
+  });
+  document.getElementById('run').addEventListener('click',run);
+
+  var rt;
+  window.addEventListener('resize',function(){ clearTimeout(rt); rt=setTimeout(buildBoard,120); });
+
+  // ---- start ----
+  renderProgram();
+  buildBoard();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CS Quiz Quest</title>
+<style>
+  :root {
+    --gold: #fbbf24;
+    --gold-soft: #fde68a;
+    --ok: #34d399;
+    --bad: #f87171;
+    --ink: #f5f3ff;
+    --muted: #c4b5fd;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    /* deep purple -> navy stage with a warm spotlight */
+    background:
+      radial-gradient(120% 90% at 50% -10%, rgba(251,191,36,.22), transparent 45%),
+      radial-gradient(90% 70% at 50% 120%, rgba(139,92,246,.25), transparent 50%),
+      linear-gradient(160deg, #2e1065 0%, #1e1b4b 45%, #0f172a 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    padding: 64px 16px 32px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .stage {
+    width: 100%;
+    max-width: 640px;
+    margin-top: 8px;
+  }
+  /* Panels */
+  .panel {
+    background: linear-gradient(180deg, rgba(49,46,129,.66), rgba(15,23,42,.72));
+    border: 1px solid rgba(251,191,36,.35);
+    border-radius: 22px;
+    padding: 26px 22px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter: blur(8px);
+  }
+  .marquee {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .bulbs { font-size: 15px; letter-spacing: 6px; color: var(--gold); filter: drop-shadow(0 0 6px rgba(251,191,36,.6)); }
+  h1 {
+    font-size: clamp(28px, 7vw, 46px);
+    font-weight: 900;
+    letter-spacing: 1px;
+    line-height: 1.05;
+    margin: 6px 0 4px;
+    background: linear-gradient(180deg, #fff, var(--gold));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 2px 0 rgba(0,0,0,.15);
+  }
+  .tag { color: var(--muted); font-size: 14px; }
+  .lead { color: var(--gold-soft); font-weight: 700; margin-top: 4px; font-size: 14px; }
+
+  .how {
+    background: rgba(0,0,0,.22);
+    border: 1px dashed rgba(251,191,36,.4);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 18px 0;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: #e9e6ff;
+  }
+  .how b { color: var(--gold); }
+  .concept {
+    margin-top: 10px; font-size: 13px; color: var(--muted);
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: inherit; font-weight: 800; font-size: 17px;
+    color: #3b1e00; cursor: pointer;
+    background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+    border: none; border-radius: 999px;
+    padding: 15px 26px; width: 100%;
+    box-shadow: 0 10px 24px rgba(251,191,36,.35), inset 0 1px 0 rgba(255,255,255,.5);
+    transition: transform .08s ease, box-shadow .2s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost {
+    background: rgba(255,255,255,.06); color: var(--ink);
+    border: 1px solid rgba(251,191,36,.4); box-shadow: none; font-size: 15px;
+  }
+
+  /* HUD */
+  .hud {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .chip {
+    font-weight: 800; font-size: 13px; color: var(--gold-soft);
+    background: rgba(0,0,0,.3); border: 1px solid rgba(251,191,36,.3);
+    padding: 7px 13px; border-radius: 999px;
+  }
+  .chip .n { color: #fff; }
+
+  .timerwrap { margin: 4px 0 18px; }
+  .timerbar {
+    height: 12px; width: 100%;
+    background: rgba(0,0,0,.35); border-radius: 999px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .timerfill {
+    height: 100%; width: 100%;
+    background: linear-gradient(90deg, var(--gold), #fb923c);
+    border-radius: 999px; transition: width .25s linear;
+  }
+  .timerfill.low { background: linear-gradient(90deg, #fb7185, #ef4444); }
+
+  .q {
+    font-size: clamp(19px, 4.6vw, 24px); font-weight: 800; line-height: 1.35;
+    margin-bottom: 18px; min-height: 2.2em;
+  }
+  .opts { display: grid; gap: 12px; }
+  .opt {
+    text-align: left; font-family: inherit; font-size: 16px; font-weight: 600;
+    color: var(--ink); cursor: pointer;
+    background: rgba(255,255,255,.05);
+    border: 1.5px solid rgba(255,255,255,.14);
+    border-radius: 14px; padding: 15px 16px;
+    display: flex; align-items: center; gap: 12px;
+    transition: transform .08s ease, background .15s ease, border-color .15s ease;
+  }
+  .opt:hover:not([disabled]) { transform: translateY(-2px); border-color: var(--gold); background: rgba(251,191,36,.12); }
+  .opt .key {
+    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px;
+    display: grid; place-items: center; font-weight: 900; font-size: 15px;
+    background: rgba(251,191,36,.18); color: var(--gold); border: 1px solid rgba(251,191,36,.4);
+  }
+  .opt.correct { background: rgba(52,211,153,.2); border-color: var(--ok); }
+  .opt.correct .key { background: var(--ok); color: #04231a; border-color: var(--ok); }
+  .opt.wrong { background: rgba(248,113,113,.2); border-color: var(--bad); }
+  .opt.wrong .key { background: var(--bad); color: #2a0606; border-color: var(--bad); }
+  .opt[disabled] { cursor: default; }
+
+  .verdict {
+    text-align: center; font-weight: 800; font-size: 16px; min-height: 24px;
+    margin-top: 16px;
+  }
+  .verdict.ok { color: var(--ok); }
+  .verdict.bad { color: var(--bad); }
+
+  /* Results */
+  .result-title {
+    text-align: center; font-size: clamp(24px, 6vw, 34px); font-weight: 900;
+    color: var(--gold); margin-bottom: 6px;
+  }
+  .result-sub { text-align: center; color: var(--muted); margin-bottom: 18px; }
+  .scoreboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+  .stat {
+    background: rgba(0,0,0,.3); border: 1px solid rgba(251,191,36,.25);
+    border-radius: 14px; padding: 14px 8px; text-align: center;
+  }
+  .stat .v { font-size: 26px; font-weight: 900; color: #fff; }
+  .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+  .badge-big { font-size: 56px; text-align: center; margin: 6px 0 2px; }
+
+  .hidden { display: none !important; }
+  .fade { animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  @media (max-width: 420px) {
+    .panel { padding: 20px 15px; }
+    .opt { font-size: 15px; padding: 13px 13px; }
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <!-- START -->
+    <section id="start" class="panel fade">
+      <div class="marquee">
+        <div class="bulbs">✦ ✦ ✦ ✦ ✦ ✦ ✦</div>
+        <h1>CS Quiz Quest</h1>
+        <div class="tag">The computer-science game show 🎪</div>
+        <div class="lead">🏆 Best: <span id="startBest">0</span></div>
+      </div>
+      <div class="how">
+        <b>How to play:</b> Answer <b>10</b> multiple-choice questions. You have
+        <b>15 seconds</b> each — answer fast for a bigger <b>speed bonus</b>!
+        Right = points &amp; a coin, wrong = the correct answer lights up green.
+        <div class="concept">💡 You'll learn everyday computer basics: hardware vs software,
+          input/output devices, storage units, the internet and more.</div>
+      </div>
+      <button class="btn" id="startBtn">▶ Start the Show</button>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="quiz" class="panel hidden">
+      <div class="hud">
+        <span class="chip">Q <span class="n" id="qNum">1</span>/10</span>
+        <span class="chip">🎯 Score <span class="n" id="score">0</span></span>
+        <span class="chip">⏱ <span class="n" id="secs">15</span>s</span>
+      </div>
+      <div class="timerwrap">
+        <div class="timerbar"><div class="timerfill" id="timerfill"></div></div>
+      </div>
+      <div class="q" id="qText">Question…</div>
+      <div class="opts" id="opts"></div>
+      <div class="verdict" id="verdict"></div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="panel hidden">
+      <div class="badge-big" id="gradeEmoji">🏆</div>
+      <div class="result-title" id="gradeTitle">CPU Champion</div>
+      <div class="result-sub" id="gradeLine">Amazing run!</div>
+      <div class="scoreboard">
+        <div class="stat"><div class="v" id="rCorrect">0</div><div class="l">Correct</div></div>
+        <div class="stat"><div class="v" id="rScore">0</div><div class="l">Score</div></div>
+        <div class="stat"><div class="v" id="rBest">0</div><div class="l">Best</div></div>
+      </div>
+      <button class="btn" id="againBtn">↻ Play Again</button>
+      <button class="btn ghost" id="hubBtn" style="margin-top:10px;">← Back to All Games</button>
+    </section>
+  </div>
+
+  <script src="../../assets/js/audio.js"></script>
+  <script src="../../assets/js/arcade.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var SLUG = 'cs-quiz';
+    Arcade.mount({ title: 'CS Quiz Quest', accent: '#fbbf24' });
+
+    // ---- Question bank (22 items). Correct answer is index 0; options shuffled later. ----
+    var BANK = [
+      { q: 'What does "CPU" stand for?',
+        o: ['Central Processing Unit', 'Computer Personal Unit', 'Central Print Utility', 'Control Power Unit'] },
+      { q: 'Is a mouse an input or an output device?',
+        o: ['Input device', 'Output device', 'Storage device', 'Both at once'] },
+      { q: 'How many bits are there in one byte?',
+        o: ['8', '4', '16', '2'] },
+      { q: 'What does "www" stand for?',
+        o: ['World Wide Web', 'Wide World Website', 'World Web Widget', 'Web World Wide'] },
+      { q: 'Which of these is an operating system?',
+        o: ['Windows', 'Microsoft Word', 'Google Chrome', 'Photoshop'] },
+      { q: 'Which part stores data even when the power is switched off?',
+        o: ['Hard disk / SSD', 'RAM', 'CPU', 'Cache'] },
+      { q: 'A monitor (screen) is mainly an…',
+        o: ['Output device', 'Input device', 'Storage device', 'Processing device'] },
+      { q: 'RAM is used to…',
+        o: ['Hold data the computer is using right now', 'Store files permanently', 'Cool the computer', 'Connect to the internet'] },
+      { q: 'What does "URL" refer to on the internet?',
+        o: ['A website address', 'A type of virus', 'A kind of monitor', 'A search engine'] },
+      { q: 'Which unit is the biggest?',
+        o: ['Gigabyte (GB)', 'Megabyte (MB)', 'Kilobyte (KB)', 'Byte'] },
+      { q: 'Software you can touch is called…',
+        o: ['That is hardware, not software', 'Freeware', 'Malware', 'Firmware'] },
+      { q: 'A keyboard is an example of a(n)…',
+        o: ['Input device', 'Output device', 'Output-only device', 'Memory chip'] },
+      { q: 'What does "HTTP" help your browser do?',
+        o: ['Load web pages from a server', 'Print documents', 'Save files to a pen drive', 'Play music offline'] },
+      { q: 'Which of these is a web browser?',
+        o: ['Mozilla Firefox', 'Windows 11', 'MS Excel', 'Android'] },
+      { q: 'A printer is an example of a(n)…',
+        o: ['Output device', 'Input device', 'Storage device', 'Network device'] },
+      { q: 'What does "GUI" mean?',
+        o: ['Graphical User Interface', 'General Utility Icon', 'Global User Internet', 'Grid Under Image'] },
+      { q: 'Which number system do computers use at the lowest level?',
+        o: ['Binary (0s and 1s)', 'Decimal (0–9)', 'Roman numerals', 'Hexadecimal only'] },
+      { q: 'What is a "byte" mostly used to measure?',
+        o: ['Amount of data / file size', 'Screen brightness', 'Internet speed only', 'CPU temperature'] },
+      { q: 'A "megabyte" is about how many kilobytes?',
+        o: ['About 1000', 'About 8', 'About 10', 'About 100000'] },
+      { q: 'Which one is application software?',
+        o: ['MS Paint', 'Linux', 'The BIOS', 'A hard disk'] },
+      { q: 'What does clicking "Save" do to your work?',
+        o: ['Stores it so it is not lost', 'Deletes it', 'Prints it', 'Emails it automatically'] },
+      { q: 'Wi-Fi is used mainly to…',
+        o: ['Connect devices to a network without wires', 'Cool the processor', 'Store photos', 'Charge the battery'] },
+      { q: 'What does a "firewall" help protect a computer from?',
+        o: ['Unwanted network attacks', 'Overheating', 'Dust', 'Low battery'] },
+      { q: 'The "brain" of the computer that does calculations is the…',
+        o: ['CPU (processor)', 'Monitor', 'Keyboard', 'Speaker'] }
+    ];
+
+    // ---- Grade tiers (by correct count out of 10) ----
+    var GRADES = [
+      { min: 10, emoji: '👑', title: 'CPU Champion',    line: 'Perfect score — you rule the arcade!' },
+      { min: 8,  emoji: '🚀', title: 'RAM Rockstar',    line: 'Blazing fast and super sharp!' },
+      { min: 6,  emoji: '💾', title: 'Data Whiz',       line: 'Solid work — you know your stuff.' },
+      { min: 4,  emoji: '🔌', title: 'Byte Builder',    line: 'Getting there — keep practising!' },
+      { min: 0,  emoji: '🐣', title: 'Byte Beginner',   line: 'Great start — play again to level up!' }
+    ];
+
+    var Q_PER_GAME = 10, TIME = 15;
+
+    // ---- DOM ----
+    var $ = function (id) { return document.getElementById(id); };
+    var elStart = $('start'), elQuiz = $('quiz'), elResults = $('results');
+
+    // ---- state ----
+    var deck = [], idx = 0, score = 0, correctCount = 0;
+    var timeLeft = TIME, timerId = null, locked = false, curCorrectText = '';
+
+    function shuffle(a) {
+      a = a.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+
+    function show(section) {
+      [elStart, elQuiz, elResults].forEach(function (s) { s.classList.add('hidden'); });
+      section.classList.remove('hidden');
+      section.classList.remove('fade'); void section.offsetWidth; section.classList.add('fade');
+    }
+
+    function refreshBest() { $('startBest').textContent = Arcade.best(SLUG); }
+
+    function startGame() {
+      SFX.play('start');
+      // pick 10 random questions, remember which option text is correct (index 0 in bank)
+      deck = shuffle(BANK).slice(0, Q_PER_GAME).map(function (item) {
+        return { q: item.q, correct: item.o[0], opts: shuffle(item.o) };
+      });
+      idx = 0; score = 0; correctCount = 0;
+      $('score').textContent = '0';
+      show(elQuiz);
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      locked = false;
+      var item = deck[idx];
+      curCorrectText = item.correct;
+      $('qNum').textContent = (idx + 1);
+      $('qText').textContent = item.q;
+      $('verdict').textContent = '';
+      $('verdict').className = 'verdict';
+
+      var keys = ['A', 'B', 'C', 'D'];
+      var box = $('opts');
+      box.innerHTML = '';
+      item.opts.forEach(function (text, i) {
+        var b = document.createElement('button');
+        b.className = 'opt';
+        b.innerHTML = '<span class="key">' + keys[i] + '</span><span>' + text + '</span>';
+        b.addEventListener('click', function () { choose(b, text); });
+        box.appendChild(b);
+      });
+      startTimer();
+    }
+
+    function startTimer() {
+      timeLeft = TIME;
+      updateTimer();
+      clearInterval(timerId);
+      timerId = setInterval(function () {
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 5 && timeLeft > 0) SFX.play('tick');
+        if (timeLeft <= 0) { clearInterval(timerId); timeUp(); }
+      }, 1000);
+    }
+
+    function updateTimer() {
+      $('secs').textContent = Math.max(0, timeLeft);
+      var fill = $('timerfill');
+      fill.style.width = (Math.max(0, timeLeft) / TIME * 100) + '%';
+      if (timeLeft <= 5) fill.classList.add('low'); else fill.classList.remove('low');
+    }
+
+    function revealAll(chosenBtn, correctText, isRight) {
+      var buttons = $('opts').querySelectorAll('.opt');
+      buttons.forEach(function (b) {
+        b.setAttribute('disabled', 'true');
+        var label = b.querySelector('span:last-child').textContent;
+        if (label === correctText) b.classList.add('correct');
+        else if (b === chosenBtn && !isRight) b.classList.add('wrong');
+      });
+    }
+
+    function choose(btn, text) {
+      if (locked) return;
+      locked = true;
+      clearInterval(timerId);
+      SFX.play('click');
+      var isRight = (text === curCorrectText);
+      revealAll(btn, curCorrectText, isRight);
+
+      if (isRight) {
+        var gained = 100 + timeLeft * 10; // speed bonus
+        score += gained; correctCount++;
+        $('score').textContent = score;
+        SFX.play('correct'); SFX.play('coin');
+        var v = $('verdict'); v.className = 'verdict ok';
+        v.textContent = '✅ Correct!  +' + gained + (timeLeft > 0 ? '  (⚡' + (timeLeft * 10) + ' speed bonus)' : '');
+      } else {
+        SFX.play('wrong'); SFX.play('error');
+        var w = $('verdict'); w.className = 'verdict bad';
+        w.textContent = '❌ Oops! The correct answer is highlighted.';
+      }
+      setTimeout(next, isRight ? 1100 : 1650);
+    }
+
+    function timeUp() {
+      if (locked) return;
+      locked = true;
+      SFX.play('wrong'); SFX.play('error');
+      revealAll(null, curCorrectText, false);
+      var v = $('verdict'); v.className = 'verdict bad';
+      v.textContent = "⏰ Time's up! The correct answer is highlighted.";
+      setTimeout(next, 1650);
+    }
+
+    function next() {
+      idx++;
+      if (idx >= deck.length) finish();
+      else renderQuestion();
+    }
+
+    function gradeFor(n) {
+      for (var i = 0; i < GRADES.length; i++) if (n >= GRADES[i].min) return GRADES[i];
+      return GRADES[GRADES.length - 1];
+    }
+
+    function finish() {
+      clearInterval(timerId);
+      var g = gradeFor(correctCount);
+      var isNewBest = Arcade.best(SLUG, score); // saves if higher
+      var best = Arcade.best(SLUG);
+
+      $('gradeEmoji').textContent = g.emoji;
+      $('gradeTitle').textContent = g.title;
+      $('gradeLine').textContent = g.line;
+      $('rCorrect').textContent = correctCount + '/' + Q_PER_GAME;
+      $('rScore').textContent = score;
+      $('rBest').textContent = best;
+
+      show(elResults);
+
+      if (correctCount >= 6) {
+        SFX.play(correctCount >= 8 ? 'fanfare' : 'win');
+        Arcade.confetti();
+      } else {
+        SFX.play('lose');
+      }
+      if (isNewBest && score > 0) {
+        setTimeout(function () { SFX.play('powerup'); }, 350);
+      }
+    }
+
+    // ---- wire up ----
+    $('startBtn').addEventListener('click', startGame);
+    $('againBtn').addEventListener('click', startGame);
+    $('hubBtn').addEventListener('click', function () {
+      SFX.play('select');
+      window.location.href = Arcade.hubUrl;
+    });
+
+    refreshBest();
+  })();
+  </script>
+</body>
+</html>

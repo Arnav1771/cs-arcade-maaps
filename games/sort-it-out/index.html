@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Sort It Out</title>
+<style>
+  :root {
+    --accent: #34d399;
+    --accent-dim: #0f766e;
+    --bg0: #05121a;
+    --bg1: #0a1f2b;
+    --card: rgba(13, 33, 45, 0.72);
+    --ink: #e6fff5;
+    --muted: #7fb8ab;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 700px at 80% -10%, rgba(52, 211, 153, 0.16), transparent 60%),
+      radial-gradient(900px 600px at 0% 110%, rgba(20, 184, 166, 0.12), transparent 55%),
+      linear-gradient(160deg, var(--bg1), var(--bg0));
+    min-height: 100%;
+    padding: 64px 14px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { width: 100%; max-width: 760px; }
+
+  header.hero { text-align: center; margin-bottom: 14px; }
+  h1 {
+    font-size: clamp(26px, 6vw, 40px);
+    letter-spacing: 0.5px;
+    background: linear-gradient(90deg, #a7f3d0, var(--accent));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tag { color: var(--accent); font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .how {
+    color: var(--muted); font-size: 14px; line-height: 1.5;
+    max-width: 560px; margin: 8px auto 0;
+  }
+  .how b { color: var(--ink); }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid rgba(52, 211, 153, 0.22);
+    border-radius: 18px;
+    padding: 16px 16px 20px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    margin-top: 14px;
+  }
+
+  .hud {
+    display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .stat {
+    flex: 1 1 90px; min-width: 78px; text-align: center;
+    background: rgba(5, 20, 27, 0.55);
+    border: 1px solid rgba(52, 211, 153, 0.16);
+    border-radius: 12px; padding: 8px 6px;
+  }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .stat .v { font-size: 22px; font-weight: 800; color: var(--accent); }
+
+  /* ---- bar chart area ---- */
+  .goal {
+    text-align: center; font-size: 13px; color: var(--muted);
+    margin: 6px 0 10px;
+  }
+  .goal span { color: var(--accent); font-weight: 700; }
+  #chart {
+    display: flex; align-items: flex-end; justify-content: center;
+    gap: clamp(4px, 1.5vw, 12px);
+    height: 260px;
+    padding: 0 4px;
+  }
+  .bar {
+    position: relative;
+    flex: 1 1 0; min-width: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    cursor: pointer;
+    will-change: transform;
+  }
+  .bar .col {
+    width: 100%;
+    border-radius: 8px 8px 3px 3px;
+    background: linear-gradient(180deg, #5eead4, var(--accent-dim));
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25);
+    transition: height 0.28s cubic-bezier(.4,1.3,.5,1), box-shadow 0.2s, filter 0.2s;
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .bar .num {
+    margin-top: 6px; font-weight: 800; font-size: clamp(11px, 2.6vw, 16px);
+    color: var(--ink);
+  }
+  .bar.sel .col {
+    filter: brightness(1.25) saturate(1.2);
+    box-shadow: 0 0 0 3px var(--accent), 0 0 18px rgba(52, 211, 153, 0.6);
+  }
+  .bar.locked .col {
+    background: linear-gradient(180deg, #bbf7d0, #16a34a);
+  }
+  .bar.pulse .col { animation: pop 0.5s ease; }
+  @keyframes pop {
+    0% { transform: scaleY(1); }
+    40% { transform: scaleY(1.06); box-shadow: 0 0 22px rgba(52,211,153,.85); }
+    100% { transform: scaleY(1); }
+  }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 16px; }
+  button.btn {
+    font-family: inherit; font-weight: 700; font-size: 14px;
+    color: #04120c; background: linear-gradient(180deg, #6ee7c4, var(--accent));
+    border: none; border-radius: 999px; padding: 12px 20px; cursor: pointer;
+    box-shadow: 0 6px 16px rgba(52, 211, 153, 0.3);
+    transition: transform 0.12s, filter 0.12s; min-height: 44px;
+  }
+  button.btn.ghost {
+    color: var(--ink); background: rgba(5, 20, 27, 0.6);
+    border: 1px solid rgba(52, 211, 153, 0.35); box-shadow: none;
+  }
+  button.btn:hover { filter: brightness(1.06); }
+  button.btn:active { transform: translateY(2px); }
+  button.btn:disabled { opacity: 0.4; cursor: default; }
+
+  .msg {
+    text-align: center; margin-top: 14px; min-height: 24px;
+    font-weight: 700; font-size: 15px; color: var(--accent);
+  }
+
+  /* win overlay */
+  .overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+    background: rgba(3, 12, 17, 0.78); backdrop-filter: blur(4px);
+  }
+  .overlay.show { display: flex; }
+  .card-win {
+    background: linear-gradient(160deg, #0d2b25, #061a15);
+    border: 1px solid var(--accent); border-radius: 20px;
+    padding: 26px 24px; text-align: center; max-width: 380px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  }
+  .card-win h2 { font-size: 28px; margin-bottom: 6px; color: var(--accent); }
+  .card-win p { color: var(--muted); font-size: 15px; line-height: 1.5; margin-bottom: 8px; }
+  .card-win .big { font-size: 38px; font-weight: 900; color: var(--ink); margin: 6px 0; }
+  .card-win .row { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="tag">Concept: Sorting</div>
+      <h1>Sort It Out</h1>
+      <p class="how">
+        Sorting means <b>putting things in order</b> — one of the most common jobs a
+        computer does. Be the sorting algorithm: <b>tap two bars to swap them</b> and
+        line them up <b>shortest → tallest</b>. Fewer swaps = a higher score!
+      </p>
+    </header>
+
+    <div class="panel">
+      <div class="hud">
+        <div class="stat"><div class="k">Level</div><div class="v" id="lvl">1</div></div>
+        <div class="stat"><div class="k">Bars</div><div class="v" id="count">5</div></div>
+        <div class="stat"><div class="k">Swaps</div><div class="v" id="swaps">0</div></div>
+        <div class="stat"><div class="k">Score</div><div class="v" id="score">0</div></div>
+        <div class="stat"><div class="k">Best</div><div class="v" id="best">0</div></div>
+      </div>
+
+      <div class="goal">Goal: arrange bars in <span>ascending</span> order (low → high)</div>
+      <div id="chart" aria-label="bars to sort"></div>
+
+      <div class="controls">
+        <button class="btn ghost" id="shuffleBtn">🔀 Shuffle</button>
+        <button class="btn ghost" id="restartBtn">↺ Restart Level</button>
+        <button class="btn" id="nextBtn" disabled>Next Level →</button>
+      </div>
+      <div class="msg" id="msg">Tap a bar, then tap another to swap them.</div>
+    </div>
+  </div>
+
+  <!-- win overlay -->
+  <div class="overlay" id="overlay">
+    <div class="card-win">
+      <h2 id="winTitle">Sorted! 🎉</h2>
+      <p id="winSub">You ordered them all.</p>
+      <div class="big" id="winScore">+0</div>
+      <p id="winPar"></p>
+      <div class="row">
+        <button class="btn ghost" id="replayBtn">Replay Level</button>
+        <button class="btn" id="advanceBtn">Next Level →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/audio.js"></script>
+  <script src="../../assets/js/arcade.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var SLUG = 'sort-it-out';
+    Arcade.mount({ title: 'Sort It Out', accent: '#34d399' });
+
+    // ---- level config: number of bars grows ----
+    var COUNTS = [5, 7, 9, 11];
+    var level = 0;              // index into COUNTS
+    var values = [];           // current order of bar values
+    var target = [];           // sorted target (ascending)
+    var maxVal = 100;
+    var swaps = 0;
+    var selected = -1;         // index of first-picked bar (-1 = none)
+    var totalScore = 0;        // cumulative across levels this run
+    var locked = false;        // true after a level is won
+    var animating = false;
+    var justPlaced = -1;       // index that should pulse after a swap
+
+    var chart = document.getElementById('chart');
+    var elMsg = document.getElementById('msg');
+
+    function $(id) { return document.getElementById(id); }
+    function setText(id, t) { $(id).textContent = t; }
+
+    // ---- build a shuffled set of distinct values ----
+    function makeValues(n) {
+      // distinct values, one per band, so heights are clearly different
+      var pool = [];
+      var band = Math.floor(84 / n);
+      for (var i = 0; i < n; i++) {
+        pool.push(14 + i * band + Math.floor(Math.random() * Math.max(1, band - 2)));
+      }
+      maxVal = Math.max.apply(null, pool);
+      // Fisher–Yates shuffle
+      for (var j = pool.length - 1; j > 0; j--) {
+        var r = Math.floor(Math.random() * (j + 1));
+        var t = pool[j]; pool[j] = pool[r]; pool[r] = t;
+      }
+      // never hand back an already-sorted row
+      var sorted = pool.slice().sort(function (a, b) { return a - b; });
+      if (pool.join() === sorted.join()) { pool.reverse(); }
+      return pool;
+    }
+
+    function startLevel(reset) {
+      var n = COUNTS[level];
+      if (reset || values.length !== n) {
+        values = makeValues(n);
+      }
+      target = values.slice().sort(function (a, b) { return a - b; });
+      swaps = 0;
+      selected = -1;
+      locked = false;
+      justPlaced = -1;
+      $('nextBtn').disabled = true;
+      setText('lvl', level + 1);
+      setText('count', n);
+      setText('swaps', 0);
+      setText('score', totalScore);
+      setText('best', Arcade.best(SLUG));
+      elMsg.textContent = 'Tap a bar, then tap another to swap them.';
+      render();
+    }
+
+    // ---- render bars from current values ----
+    function render() {
+      chart.innerHTML = '';
+      values.forEach(function (val, i) {
+        var bar = document.createElement('div');
+        bar.className = 'bar';
+        if (i === selected) bar.className += ' sel';
+        var inPlace = val === target[i];
+        if (inPlace) bar.className += ' locked';
+        if (i === justPlaced && inPlace) bar.className += ' pulse';
+
+        var col = document.createElement('div');
+        col.className = 'col';
+        var h = 22 + Math.round((val / maxVal) * 210);
+        col.style.height = h + 'px';
+
+        var num = document.createElement('div');
+        num.className = 'num';
+        num.textContent = val;
+
+        bar.appendChild(col);
+        bar.appendChild(num);
+        bar.dataset.i = i;
+        bar.addEventListener('click', function () { onPick(parseInt(this.dataset.i, 10)); });
+        chart.appendChild(bar);
+      });
+      justPlaced = -1;
+    }
+
+    // ---- picking / swapping ----
+    function onPick(i) {
+      if (locked || animating) return;
+      if (selected === -1) {
+        selected = i;
+        SFX.play('select');
+        elMsg.textContent = 'Now tap a bar to swap with it (or tap it again to cancel).';
+        render();
+        return;
+      }
+      if (i === selected) {          // tap same bar -> cancel
+        selected = -1;
+        SFX.play('blip');
+        elMsg.textContent = 'Selection cleared. Tap a bar to start again.';
+        render();
+        return;
+      }
+      doSwap(selected, i);
+    }
+
+    function doSwap(a, b) {
+      animating = true;
+      var els = chart.children;
+      var ra = els[a].getBoundingClientRect();
+      var rb = els[b].getBoundingClientRect();
+      var dx = rb.left - ra.left;
+      els[a].classList.remove('sel');
+      els[a].style.transition = 'transform .27s ease';
+      els[b].style.transition = 'transform .27s ease';
+      els[a].style.zIndex = '5';
+      els[b].style.zIndex = '5';
+      els[a].style.transform = 'translateX(' + dx + 'px)';
+      els[b].style.transform = 'translateX(' + (-dx) + 'px)';
+      SFX.play('swap');
+
+      setTimeout(function () {
+        var t = values[a]; values[a] = values[b]; values[b] = t;
+        swaps++;
+        setText('swaps', swaps);
+        selected = -1;
+        // pulse whichever landed in its correct final spot
+        justPlaced = (values[b] === target[b]) ? b : (values[a] === target[a] ? a : -1);
+        render();
+        if (justPlaced !== -1) SFX.play('tick');
+        animating = false;
+        checkWin();
+      }, 285);
+    }
+
+    function isSorted() {
+      for (var i = 0; i < values.length; i++) {
+        if (values[i] !== target[i]) return false;
+      }
+      return true;
+    }
+
+    // minimal swaps needed = elements - number of cycles (our "par")
+    function parSwaps() {
+      var n = target.length;
+      var pos = {};
+      target.forEach(function (v, i) { pos[v] = i; });
+      var seen = new Array(n).fill(false);
+      var cycles = 0;
+      for (var i = 0; i < n; i++) {
+        if (seen[i]) continue;
+        cycles++;
+        var j = i;
+        while (!seen[j]) { seen[j] = true; j = pos[values[j]]; }
+      }
+      return n - cycles;
+    }
+
+    function checkWin() {
+      if (!isSorted()) return;
+      locked = true;
+      var par = Math.max(1, parSwaps() || 1);
+      // reward efficiency: full base for hitting par, decays as you go over
+      var base = COUNTS[level] * 120;
+      var over = Math.max(0, swaps - par);
+      var gained = Math.max(20, Math.round(base - over * 40));
+      totalScore += gained;
+      setText('score', totalScore);
+
+      var newBest = Arcade.best(SLUG, totalScore);
+      setText('best', Arcade.best(SLUG));
+
+      SFX.play('win');
+      setTimeout(function () { SFX.play('fanfare'); }, 180);
+      Arcade.confetti();
+
+      $('winScore').textContent = '+' + gained;
+      $('winSub').textContent = 'Solved in ' + swaps + ' swap' + (swaps === 1 ? '' : 's') + '.';
+      $('winPar').textContent = (swaps <= par)
+        ? '✨ Perfect — you matched the fewest swaps possible!'
+        : 'Fewest possible was ' + par + '. Try to beat that!';
+      $('winTitle').textContent = newBest ? 'New Best! 🏆' : 'Sorted! 🎉';
+      var last = level >= COUNTS.length - 1;
+      $('advanceBtn').textContent = last ? 'Play Again ↺' : 'Next Level →';
+      $('nextBtn').disabled = false;
+      $('overlay').classList.add('show');
+      elMsg.textContent = 'Sorted! ' + swaps + ' swaps used.';
+    }
+
+    function advance() {
+      $('overlay').classList.remove('show');
+      SFX.play('start');
+      if (level >= COUNTS.length - 1) {
+        // wrap back to level 1, keep cumulative score rolling
+        level = 0;
+      } else {
+        level++;
+      }
+      startLevel(true);
+    }
+
+    // ---- buttons ----
+    $('shuffleBtn').addEventListener('click', function () {
+      if (animating) return;
+      SFX.play('whoosh');
+      startLevel(true);
+    });
+    $('restartBtn').addEventListener('click', function () {
+      if (animating) return;
+      SFX.play('click');
+      startLevel(true);
+    });
+    $('nextBtn').addEventListener('click', function () {
+      if ($('nextBtn').disabled) return;
+      advance();
+    });
+    $('replayBtn').addEventListener('click', function () {
+      $('overlay').classList.remove('show');
+      SFX.play('click');
+      startLevel(true);
+    });
+    $('advanceBtn').addEventListener('click', advance);
+
+    // hover blips for pointer devices
+    ['shuffleBtn', 'restartBtn', 'nextBtn'].forEach(function (id) {
+      $(id).addEventListener('mouseenter', function () { SFX.play('hover'); });
+    });
+
+    // re-render on resize so translate math stays fresh (heights are relative)
+    window.addEventListener('resize', function () { if (!animating) render(); });
+
+    // ---- go ----
+    startLevel(true);
+  })();
+  </script>
+</body>
+</html>

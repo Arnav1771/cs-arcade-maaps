@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logic Lab</title>
+<style>
+  :root{ --lime:#a3e635; --lime-soft:#d9f99d; --bg0:#0a1408; --bg1:#111f0c; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:#e7f5d8; min-height:100%;
+    background:
+      radial-gradient(circle at 18% 20%, rgba(163,230,53,.10), transparent 40%),
+      radial-gradient(circle at 82% 80%, rgba(163,230,53,.08), transparent 45%),
+      linear-gradient(160deg, var(--bg0), var(--bg1) 60%, #060d05);
+    /* breadboard dot grid */
+    background-attachment:fixed;
+    padding:64px 14px 40px;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:radial-gradient(rgba(163,230,53,.10) 1.4px, transparent 1.5px);
+    background-size:26px 26px; opacity:.5;
+  }
+  .wrap{ width:100%; max-width:760px; }
+  h1{ display:none; }
+
+  /* ---- HUD ---- */
+  .hud{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    background:rgba(10,20,6,.7); border:1px solid rgba(163,230,53,.28);
+    border-radius:16px; padding:10px 16px; margin-bottom:14px;
+  }
+  .hud .lv{ font-weight:800; color:var(--lime); letter-spacing:.5px; font-size:15px; }
+  .stat{ font-size:13px; color:#b9d89a; }
+  .stat b{ color:#fff; font-size:15px; }
+
+  .card{
+    background:rgba(9,18,6,.72); border:1px solid rgba(163,230,53,.22);
+    border-radius:18px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  .goal{
+    text-align:center; margin-bottom:12px; font-size:clamp(18px,4.4vw,24px); font-weight:800;
+  }
+  .goal .want{ color:var(--lime); text-shadow:0 0 14px rgba(163,230,53,.5); }
+  .gatename{
+    text-align:center; letter-spacing:2px; text-transform:uppercase;
+    color:#9fbf78; font-size:12px; font-weight:700; margin-bottom:6px;
+  }
+  svg.stage{ width:100%; height:auto; display:block; }
+
+  /* circuit styles */
+  .wire{ stroke:#2c3d1e; stroke-width:5; fill:none; stroke-linecap:round; transition:stroke .18s; }
+  .wire.on{ stroke:var(--lime); filter:url(#glow); }
+  .pin{ fill:#3a4a2a; transition:fill .18s; }
+  .pin.on{ fill:var(--lime); }
+  .gbody{ fill:rgba(16,28,10,.96); stroke:var(--lime); stroke-width:2.5; }
+  .gline{ fill:none; stroke:var(--lime); stroke-width:2.5; }
+  .glabel{ fill:var(--lime); font-weight:800; text-anchor:middle; }
+  .switch{ cursor:pointer; }
+  .track{ fill:#1c2814; stroke:#4a5a30; stroke-width:2; transition:.18s; }
+  .switch.on .track{ fill:#38541a; stroke:var(--lime); }
+  .knob{ fill:#8a9a70; transition:.18s; }
+  .switch.on .knob{ fill:var(--lime); filter:url(#glow); }
+  .swlabel{ fill:#cfe6ac; font-weight:800; text-anchor:middle; }
+  .swval{ fill:#0a1408; font-weight:800; text-anchor:middle; font-size:14px; }
+  .glass{ fill:#141d0c; stroke:#4a5a30; stroke-width:2.5; transition:.2s; }
+  .bulb.lit .glass{ fill:var(--lime); stroke:var(--lime-soft); filter:url(#glow); }
+  .bulbbase{ fill:#3a4a2a; }
+  .bulbtxt{ text-anchor:middle; font-weight:800; font-size:16px; fill:#9fbf78; }
+  .bulb.lit .bulbtxt{ fill:#0a1408; }
+  .ray{ stroke:var(--lime); stroke-width:3; stroke-linecap:round; opacity:0; }
+  .bulb.lit .ray{ opacity:.8; }
+
+  /* truth table */
+  .tt{ margin-top:14px; }
+  .tt h3{ font-size:12px; letter-spacing:1px; text-transform:uppercase; color:#9fbf78; text-align:center; margin-bottom:8px; }
+  table{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th,td{ padding:7px 4px; text-align:center; font-size:15px; border:1px solid rgba(163,230,53,.14); }
+  th{ color:var(--lime); font-size:12px; letter-spacing:1px; }
+  td{ color:#cfe6ac; font-weight:700; }
+  tr.hot td{ background:rgba(163,230,53,.16); color:#fff; }
+  td.one{ color:var(--lime); }
+
+  .msg{ text-align:center; margin-top:14px; min-height:28px; font-weight:800; font-size:17px; }
+  .msg.good{ color:var(--lime); }
+  .btnrow{ text-align:center; margin-top:10px; }
+  button.act{
+    font:inherit; font-weight:800; cursor:pointer; color:#0a1408; background:var(--lime);
+    border:none; border-radius:999px; padding:12px 26px; font-size:16px;
+    box-shadow:0 6px 20px rgba(163,230,53,.35); transition:transform .1s, opacity .2s;
+  }
+  button.act:hover{ transform:translateY(-2px); }
+  button.act:active{ transform:translateY(0); }
+  button.ghost{ background:transparent; color:var(--lime); border:2px solid var(--lime); box-shadow:none; }
+
+  /* overlays */
+  .overlay{
+    position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center;
+    padding:20px; background:rgba(4,8,3,.86); backdrop-filter:blur(4px);
+  }
+  .overlay .panel{ max-width:460px; text-align:center; }
+  .panel .big{ font-size:clamp(30px,8vw,46px); font-weight:900; color:var(--lime); text-shadow:0 0 22px rgba(163,230,53,.5); margin-bottom:6px; }
+  .panel p{ color:#c7e0a6; line-height:1.55; margin:10px 0; font-size:15px; }
+  .panel .concept{ background:rgba(163,230,53,.1); border:1px solid rgba(163,230,53,.3); border-radius:12px; padding:12px; font-size:14px; }
+  .hidden{ display:none !important; }
+  .howto{ text-align:left; font-size:14px; color:#c7e0a6; margin:12px auto; max-width:360px; }
+  .howto li{ margin:6px 0; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hud">
+      <span class="lv" id="lv">Level 1</span>
+      <span class="stat">Score <b id="score">0</b></span>
+      <span class="stat">Best <b id="best">0</b></span>
+    </div>
+
+    <div class="card">
+      <div class="gatename" id="gatename">AND GATE</div>
+      <div class="goal">Make the bulb turn <span class="want" id="want">ON</span></div>
+      <svg class="stage" id="stage" viewBox="0 0 440 200" preserveAspectRatio="xMidYMid meet" aria-label="logic circuit"></svg>
+      <div class="tt">
+        <h3>Truth Table</h3>
+        <div id="ttbox"></div>
+      </div>
+      <div class="msg" id="msg"></div>
+      <div class="btnrow"><button class="act hidden" id="next">Next Level →</button></div>
+    </div>
+  </div>
+
+  <!-- START overlay -->
+  <div class="overlay" id="startOv">
+    <div class="panel card">
+      <div class="big">Logic Lab</div>
+      <div class="concept">Logic gates take inputs that are <b>ON&nbsp;(1)</b> or <b>OFF&nbsp;(0)</b> and decide an output. They are the tiny building blocks inside every computer chip.</div>
+      <ul class="howto">
+        <li>🔘 Tap the input switches <b>A</b> and <b>B</b> to flip them ON / OFF.</li>
+        <li>💡 The wires glow and the bulb lights when the value is <b>1</b>.</li>
+        <li>🎯 Read the gate's truth table, then set the switches to hit the goal!</li>
+      </ul>
+      <div class="btnrow"><button class="act" id="startBtn">Start ⚡</button></div>
+    </div>
+  </div>
+
+  <!-- WIN overlay -->
+  <div class="overlay hidden" id="winOv">
+    <div class="panel card">
+      <div class="big">Circuit Master! 🏆</div>
+      <p>You wired every gate correctly and learned how chips make decisions.</p>
+      <p>Score <b id="finalScore" style="color:#fff">0</b><br>Best <b id="finalBest" style="color:#fff">0</b></p>
+      <div class="btnrow"><button class="act" id="againBtn">Play Again ↻</button></div>
+    </div>
+  </div>
+
+<script src="../../assets/js/audio.js"></script>
+<script src="../../assets/js/arcade.js"></script>
+<script>
+(function(){
+  'use strict';
+  var SLUG='logic-lab';
+  Arcade.mount({ title:'Logic Lab', accent:'#a3e635' });
+
+  // ---- levels: stages evaluate left-to-right; 'g0' feeds a later gate ----
+  var LEVELS=[
+    { name:'AND Gate',  goal:1, layout:'single2', stages:[{type:'AND', from:['A','B']}], tip:'AND needs BOTH switches ON.' },
+    { name:'OR Gate',   goal:1, layout:'single2', stages:[{type:'OR',  from:['A','B']}], tip:'OR needs AT LEAST ONE switch ON.' },
+    { name:'NOT Gate',  goal:1, layout:'single1', stages:[{type:'NOT', from:['A']}],      tip:'NOT flips the input around.' },
+    { name:'NOT Gate',  goal:0, layout:'single1', stages:[{type:'NOT', from:['A']}],      tip:'NOT flips it: switch ON makes output OFF.' },
+    { name:'XOR Gate',  goal:1, layout:'single2', stages:[{type:'XOR', from:['A','B']}], tip:'XOR = ON only when the switches DIFFER.' },
+    { name:'NAND Gate', goal:0, layout:'single2', stages:[{type:'NAND',from:['A','B']}], tip:'NAND is OFF only when both are ON.' },
+    { name:'XOR Gate',  goal:0, layout:'single2', stages:[{type:'XOR', from:['A','B']}], tip:'XOR = OFF when the switches MATCH.' },
+    { name:'AND → NOT', goal:0, layout:'double',  stages:[{type:'AND',from:['A','B']},{type:'NOT',from:['g0']}], tip:'Two gates! NOT flips the AND result.' },
+    { name:'OR → NOT',  goal:1, layout:'double',  stages:[{type:'OR', from:['A','B']},{type:'NOT',from:['g0']}], tip:'NOT flips the OR result — this is a NOR.' }
+  ];
+
+  var idx=0, score=0, st={A:0,B:0}, solved=false;
+  var $=function(id){ return document.getElementById(id); };
+  $('best').textContent = Arcade.best(SLUG);
+
+  // ---- gate maths ----
+  function op(type,v){
+    switch(type){
+      case 'AND':  return (v[0]&&v[1])?1:0;
+      case 'OR':   return (v[0]||v[1])?1:0;
+      case 'NOT':  return v[0]?0:1;
+      case 'XOR':  return (v[0]!==v[1])?1:0;
+      case 'NAND': return (v[0]&&v[1])?0:1;
+    }
+    return 0;
+  }
+  function evalLevel(L,a,b){
+    var inp={A:a,B:b}, g=[];
+    L.stages.forEach(function(s,i){
+      var vals=s.from.map(function(f){ return f[0]==='g'? g[+f.slice(1)] : inp[f]; });
+      g[i]=op(s.type,vals);
+    });
+    return { g:g, out:g[g.length-1] };
+  }
+  function inputCount(L){ return L.layout==='single1'?1:2; }
+
+  // ---- gate geometry ----
+  function pins(type,gx,gy){
+    if(type==='NOT') return { in:[{x:gx+6,y:gy+25}], out:{x:gx+60,y:gy+25} };
+    if(type==='AND'||type==='NAND') return { in:[{x:gx+4,y:gy+15},{x:gx+4,y:gy+35}], out:{x:gx+(type==='NAND'?61:51),y:gy+25} };
+    // OR family
+    return { in:[{x:gx+6,y:gy+16},{x:gx+6,y:gy+34}], out:{x:gx+(type==='NOR'?63:54),y:gy+25} };
+  }
+  function gateBody(type,gx,gy){
+    var lbl='<text class="glabel" font-size="'+(type.length>3?11:13)+'" x="'+(gx+24)+'" y="'+(gy+30)+'">'+type+'</text>';
+    var s='<g>';
+    if(type==='AND'||type==='NAND'){
+      s+='<path class="gbody" d="M'+(gx+4)+','+(gy+4)+' H'+(gx+30)+' a21,21 0 0 1 0,42 H'+(gx+4)+' Z"/>';
+      if(type==='NAND') s+='<circle class="gbody" cx="'+(gx+56)+'" cy="'+(gy+25)+'" r="5"/>';
+    } else if(type==='NOT'){
+      s+='<path class="gbody" d="M'+(gx+6)+','+(gy+4)+' L'+(gx+50)+','+(gy+25)+' L'+(gx+6)+','+(gy+46)+' Z"/>';
+      s+='<circle class="gbody" cx="'+(gx+55)+'" cy="'+(gy+25)+'" r="5"/>';
+    } else { // OR / NOR / XOR
+      var d='M'+(gx+4)+','+(gy+4)+' Q'+(gx+28)+','+(gy+25)+' '+(gx+4)+','+(gy+46)+' Q'+(gx+36)+','+(gy+38)+' '+(gx+54)+','+(gy+25)+' Q'+(gx+36)+','+(gy+12)+' '+(gx+4)+','+(gy+4)+' Z';
+      s+='<path class="gbody" d="'+d+'"/>';
+      if(type==='XOR') s+='<path class="gline" d="M'+(gx-4)+','+(gy+4)+' Q'+(gx+20)+','+(gy+25)+' '+(gx-4)+','+(gy+46)+'"/>';
+      if(type==='NOR') s+='<circle class="gbody" cx="'+(gx+59)+'" cy="'+(gy+25)+'" r="5"/>';
+    }
+    return s+lbl+'</g>';
+  }
+
+  function wire(x1,y1,x2,y2,on){
+    var mx=(x1+x2)/2;
+    return '<path class="wire'+(on?' on':'')+'" d="M'+x1+','+y1+' H'+mx+' V'+y2+' H'+x2+'"/>';
+  }
+  function dot(x,y,on){ return '<circle class="pin'+(on?' on':'')+'" cx="'+x+'" cy="'+y+'" r="4"/>'; }
+
+  function sw(id,cx,cy,on){
+    var kx = on ? cx+15 : cx-15;
+    return '<g class="switch'+(on?' on':'')+'" data-in="'+id+'">'
+      +'<text class="swlabel" font-size="15" x="'+cx+'" y="'+(cy-24)+'">'+id+'</text>'
+      +'<rect class="track" x="'+(cx-30)+'" y="'+(cy-15)+'" width="60" height="30" rx="15"/>'
+      +'<circle class="knob" cx="'+kx+'" cy="'+cy+'" r="13"/>'
+      +'<text class="swval" x="'+kx+'" y="'+(cy+5)+'">'+(on?'1':'0')+'</text>'
+      +'</g>';
+  }
+  function bulb(cx,cy,on){
+    var rays='';
+    for(var i=0;i<8;i++){ var a=i*Math.PI/4; rays+='<line class="ray" x1="'+(cx+Math.cos(a)*26)+'" y1="'+(cy+Math.sin(a)*26)+'" x2="'+(cx+Math.cos(a)*34)+'" y2="'+(cy+Math.sin(a)*34)+'"/>'; }
+    return '<g class="bulb'+(on?' lit':'')+'">'+rays
+      +'<rect class="bulbbase" x="'+(cx-9)+'" y="'+(cy+19)+'" width="18" height="11" rx="2"/>'
+      +'<circle class="glass" cx="'+cx+'" cy="'+cy+'" r="22"/>'
+      +'<text class="bulbtxt" x="'+cx+'" y="'+(cy+6)+'">'+(on?'1':'0')+'</text></g>';
+  }
+
+  // ---- render the circuit for current state ----
+  function render(){
+    var L=LEVELS[idx];
+    var r=evalLevel(L, st.A, st.B);
+    var defs='<defs><filter id="glow" x="-60%" y="-60%" width="220%" height="220%">'
+      +'<feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+    var svg=defs, vb;
+
+    if(L.layout==='single1'){
+      vb='0 0 440 200';
+      var t=L.stages[0].type, gx=210,gy=75, p=pins(t,gx,gy), bx=390;
+      svg+=wire(85,100,p.in[0].x,p.in[0].y,st.A);
+      svg+=wire(p.out.x,p.out.y,bx-24,100,r.out);
+      svg+=gateBody(t,gx,gy);
+      svg+=dot(85,100,st.A)+dot(p.in[0].x,p.in[0].y,st.A)+dot(p.out.x,p.out.y,r.out);
+      svg+=sw('A',55,100,st.A)+bulb(bx,100,r.out);
+    } else if(L.layout==='single2'){
+      vb='0 0 440 200';
+      var t2=L.stages[0].type, g2x=200,g2y=75, q=pins(t2,g2x,g2y), bx2=390;
+      svg+=wire(85,60,q.in[0].x,q.in[0].y,st.A);
+      svg+=wire(85,140,q.in[1].x,q.in[1].y,st.B);
+      svg+=wire(q.out.x,q.out.y,bx2-24,100,r.out);
+      svg+=gateBody(t2,g2x,g2y);
+      svg+=dot(85,60,st.A)+dot(85,140,st.B)+dot(q.in[0].x,q.in[0].y,st.A)+dot(q.in[1].x,q.in[1].y,st.B)+dot(q.out.x,q.out.y,r.out);
+      svg+=sw('A',55,60,st.A)+sw('B',55,140,st.B)+bulb(bx2,100,r.out);
+    } else { // double
+      vb='0 0 580 200';
+      var ta=L.stages[0].type, tb=L.stages[1].type;
+      var ax=190,ay=75, pa=pins(ta,ax,ay);
+      var nx=350,ny=75, pb=pins(tb,nx,ny), bx3=520;
+      svg+=wire(85,60,pa.in[0].x,pa.in[0].y,st.A);
+      svg+=wire(85,140,pa.in[1].x,pa.in[1].y,st.B);
+      svg+=wire(pa.out.x,pa.out.y,pb.in[0].x,pb.in[0].y,r.g[0]);
+      svg+=wire(pb.out.x,pb.out.y,bx3-24,100,r.out);
+      svg+=gateBody(ta,ax,ay)+gateBody(tb,nx,ny);
+      svg+=dot(85,60,st.A)+dot(85,140,st.B)+dot(pa.out.x,pa.out.y,r.g[0])+dot(pb.out.x,pb.out.y,r.out);
+      svg+=sw('A',55,60,st.A)+sw('B',55,140,st.B)+bulb(bx3,100,r.out);
+    }
+
+    var stage=$('stage');
+    stage.setAttribute('viewBox',vb);
+    stage.innerHTML=svg;
+    // wire up switch taps
+    Array.prototype.forEach.call(stage.querySelectorAll('.switch'), function(g){
+      g.addEventListener('click', function(){ toggle(g.getAttribute('data-in')); });
+    });
+    renderTT();
+  }
+
+  // ---- live truth table ----
+  function renderTT(){
+    var L=LEVELS[idx], n=inputCount(L), rows='', head;
+    if(n===1){
+      head='<tr><th>A</th><th>Out</th></tr>';
+      for(var a=0;a<2;a++){
+        var o=evalLevel(L,a,0).out, hot=(a===st.A)?' class="hot"':'';
+        rows+='<tr'+hot+'><td class="'+(a?'one':'')+'">'+a+'</td><td class="'+(o?'one':'')+'">'+o+'</td></tr>';
+      }
+    } else {
+      head='<tr><th>A</th><th>B</th><th>Out</th></tr>';
+      for(var i=0;i<4;i++){
+        var A=(i>>1)&1, B=i&1, oo=evalLevel(L,A,B).out;
+        var hot2=(A===st.A&&B===st.B)?' class="hot"':'';
+        rows+='<tr'+hot2+'><td class="'+(A?'one':'')+'">'+A+'</td><td class="'+(B?'one':'')+'">'+B+'</td><td class="'+(oo?'one':'')+'">'+oo+'</td></tr>';
+      }
+    }
+    $('ttbox').innerHTML='<table>'+head+rows+'</table>';
+  }
+
+  // ---- interactions ----
+  function toggle(id){
+    if(solved) return;
+    st[id]=st[id]?0:1;
+    SFX.play('flip');
+    render();
+    var out=evalLevel(LEVELS[idx],st.A,st.B).out;
+    if(out===LEVELS[idx].goal) win();
+    else SFX.play('tick');
+  }
+
+  function win(){
+    solved=true;
+    score+=100;
+    $('score').textContent=score;
+    SFX.play('powerup'); setTimeout(function(){ SFX.play('correct'); },120);
+    $('msg').textContent='✅ Solved! +100';
+    $('msg').className='msg good';
+    $('next').classList.remove('hidden');
+    $('next').textContent = (idx>=LEVELS.length-1)?'Finish 🏁':'Next Level →';
+  }
+
+  function loadLevel(i){
+    idx=i; solved=false;
+    var L=LEVELS[i], n=inputCount(L);
+    // choose a starting position that does NOT already satisfy the goal
+    var opts=[];
+    var combos = n===1 ? [[0,0],[1,0]] : [[0,0],[0,1],[1,0],[1,1]];
+    combos.forEach(function(c){ if(evalLevel(L,c[0],c[1]).out!==L.goal) opts.push(c); });
+    var pick = opts.length ? opts[(Math.random()*opts.length)|0] : [0,0];
+    st.A=pick[0]; st.B=pick[1];
+    $('lv').textContent='Level '+(i+1)+' / '+LEVELS.length;
+    $('gatename').textContent=L.name;
+    $('want').textContent = L.goal?'ON':'OFF';
+    $('msg').textContent=L.tip; $('msg').className='msg';
+    $('next').classList.add('hidden');
+    render();
+  }
+
+  function nextLevel(){
+    SFX.play('click');
+    if(idx>=LEVELS.length-1){ finish(); return; }
+    SFX.play('whoosh');
+    loadLevel(idx+1);
+  }
+
+  function finish(){
+    var isBest=Arcade.best(SLUG, score);
+    $('finalScore').textContent=score;
+    $('finalBest').textContent=Arcade.best(SLUG);
+    $('winOv').classList.remove('hidden');
+    SFX.play('win'); setTimeout(function(){ SFX.play('fanfare'); },260);
+    Arcade.confetti();
+  }
+
+  function startGame(){
+    SFX.play('start');
+    score=0; $('score').textContent=0;
+    $('startOv').classList.add('hidden');
+    $('winOv').classList.add('hidden');
+    loadLevel(0);
+  }
+
+  $('startBtn').addEventListener('click', startGame);
+  $('againBtn').addEventListener('click', startGame);
+  $('next').addEventListener('click', nextLevel);
+
+  // preview render behind the start overlay
+  loadLevel(0);
+})();
+</script>
+</body>
+</html>
