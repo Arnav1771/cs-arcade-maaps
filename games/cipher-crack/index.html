@@ -267,6 +267,8 @@
   ];
   // how tight the "signal lock" window is on each mission (how close your shift
   // must be for the live decode to appear). Wider = easier; shrinks over time.
+  if (window.Arcade && Arcade.shuffleTiered) MESSAGES = Arcade.shuffleTiered(MESSAGES, 5); // randomize message order per player (within tiers)
+
   function maskDist(i) {
     if (i < 8)  return 26;   // missions 1-8:  preview always visible (easy)
     if (i < 14) return 4;    // missions 9-14: reveal within 4 of the key

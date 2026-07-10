@@ -1,6 +1,6 @@
 # Handoff — CS Arcade (MAAPS)
 
-_Last updated: 2026-07-10 · after prompt #4 (v3.1)_
+_Last updated: 2026-07-10 · after prompt #5 (v3.2)_
 
 ## What this is
 A browser arcade of **15 educational computer-science games** for the **Maharaja
@@ -12,7 +12,7 @@ no build step, no backend, works offline once loaded.
 - **Local working copy:** `C:\Users\arnav.bhargava\cs-arcade-maaps`
   (= WSL `/mnt/c/Users/arnav.bhargava/cs-arcade-maaps`)
 
-## Current state (v3.1) — all shipped & live
+## Current state (v3.2) — all shipped & live
 - 15 games, each with **20 levels** and its own theme.
 - **Exhibition flow:** enter name → **pick any 4 games** → those 4 are your session.
   Non-chosen games are **locked** (🔒). "Change my 4" re-opens the picker.

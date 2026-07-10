@@ -230,6 +230,8 @@
     { name:'NOT (A NOR B)',  goal:1, layout:'double', stages:[{type:'NOR', from:['A','B']},{type:'NOT',from:['g0']}], tip:'Two flips cancel: this is ON when AT LEAST ONE switch is ON.' }
   ];
 
+  if (window.Arcade && Arcade.shuffleTiered) LEVELS = Arcade.shuffleTiered(LEVELS, 5); // randomize order per player (within difficulty tiers)
+
   var idx=0, score=0, st={A:0,B:0,C:0}, solved=false;
   var solvedCount=0, gatePulse=false, lastToggled=null;
   var $=function(id){ return document.getElementById(id); };

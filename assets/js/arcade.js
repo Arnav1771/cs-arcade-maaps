@@ -324,6 +324,21 @@
 
     showTutorial: function (slug, accent) { showTutorial(slug || currentSlug(), accent); },
 
+    // Fisher-Yates shuffle (returns a new array).
+    shuffle: function (arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+      return a;
+    },
+    // Shuffle WITHIN consecutive bands (default 5) so the difficulty ramp is
+    // preserved (early tiers stay easy) but the exact level order differs for
+    // every new player. Ideal for level-wise games with authored levels.
+    shuffleTiered: function (arr, band) {
+      band = band || 5; var out = [];
+      for (var i = 0; i < arr.length; i += band) { out = out.concat(this.shuffle(arr.slice(i, i + band))); }
+      return out;
+    },
+
     confetti: function (durationMs) {
       durationMs = durationMs || 1600;
       var cv = el('canvas', 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:10001;');

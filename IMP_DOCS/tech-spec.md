@@ -1,6 +1,11 @@
 # Technical Spec — CS Arcade
 
-_Last updated: 2026-07-10 · v3.1_
+_Last updated: 2026-07-10 · v3.2_
+
+**Level randomization (v3.2):** `Arcade.shuffle(arr)` and `Arcade.shuffleTiered(arr, band=5)`
+(shuffles within consecutive bands to keep the difficulty ramp). Authored-level games
+(logic-lab, robot-runner, cipher-crack, tower-master) call `LEVELS/MESSAGES =
+Arcade.shuffleTiered(..., 5)` on load so each new student gets a different order.
 
 ## Stack
 Vanilla HTML/CSS/JS. Zero dependencies, zero external network requests (CSP-safe,

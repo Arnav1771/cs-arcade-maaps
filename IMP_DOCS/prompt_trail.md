@@ -44,6 +44,17 @@ greyed, not navigable; tapping shakes + toasts "Change my 4"). Selection polishe
 spring-pop on pick, glowing animated ✓ check, dim-on-full, and a "ready" pulse on the
 confirm button at 4/4. Docs will be updated each subsequent prompt.
 
+## Prompt #5 — Randomize level order per player (→ v3.2)
+**Ask:** for level-wise games, randomize the levels after each new user.
+**Decision:** shuffle WITHIN difficulty tiers (bands of 5) to keep the easy→hard ramp
+while varying order per player; only authored-level games need it (the rest already
+generate content per play — binary targets, maths, words, layouts, Simon, 2048, quiz,
+patterns).
+**Done:** added `Arcade.shuffle` + `Arcade.shuffleTiered(arr, band=5)` to arcade.js;
+**Logic Lab, Robot Runner, Cipher Crack, Tower Master** now tiered-shuffle their level
+arrays on load, so each new student gets a different order. **Verified:** node syntax +
+jsdom smoke (all four load/start clean); deployed as Arnav1771.
+
 ---
 _Template for the next entry:_
 ## Prompt #N — <short title> (→ vX)

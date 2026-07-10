@@ -215,6 +215,7 @@
       { d: 7, limit: 152 }, { d: 8 }
     ];
 
+    if (window.Arcade && Arcade.shuffleTiered) LEVELS = Arcade.shuffleTiered(LEVELS, 5); // randomize order per player (within tiers)
     var level = 0;          // 0-based index into LEVELS
     var pegs = [[], [], []]; // each = disk sizes bottom->top (largest first)
     var n = 2;              // disks this level

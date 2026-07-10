@@ -1,6 +1,6 @@
 # TODOs & Known Limitations — CS Arcade
 
-_Last updated: 2026-07-10 · v3.1_
+_Last updated: 2026-07-10 · v3.2_
 
 ## Open / nice-to-have
 - [ ] **Double intro:** the central "How to Play" tutorial shows on top of each game's own
@@ -27,6 +27,8 @@ _Last updated: 2026-07-10 · v3.1_
 - [ ] Spot-check a few games reach Level 20 and the victory screen fires.
 
 ## Done (recent)
+- [x] Level order randomized per player (tiered shuffle) for logic-lab, robot-runner,
+      cipher-crack, tower-master. _(v3.2)_
 - [x] Non-selected games locked in play mode (🔒 + nudge). _(v3.1)_
 - [x] Smooth/epic selection (spring-pop, animated check, ready pulse). _(v3.1)_
 - [x] IMP_DOCS folder created. _(v3.1)_

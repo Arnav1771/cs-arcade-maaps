@@ -1,7 +1,7 @@
 # Game Design Rules — CS Arcade
 
 _The contract EVERY game must follow. Read before adding or editing a game._
-_Last updated: 2026-07-10 · v3.1_
+_Last updated: 2026-07-10 · v3.2_
 
 ## Audience
 Indian Class 8–10, but fun and winnable for kids ~10+. Light jargon, no heavy
@@ -26,6 +26,12 @@ algorithms. Name the concept in plain language. Early levels genuinely easy; ram
 Every game has a visible **Level N/20** climb of rising difficulty. Reaching Level 20 is a
 win (victory screen + `Arcade.confetti()`). Endless bonus past 20 is fine. Keep every
 level completable and verify it.
+
+**Randomize order per player.** If a game uses a fixed **authored** level array, shuffle it
+per player on load so students can't copy each other's order — but preserve the ramp:
+`if (window.Arcade) LEVELS = Arcade.shuffleTiered(LEVELS, 5);` (shuffles within tiers of 5).
+Procedurally-generated games (random targets/problems/words/layouts/sequences) already
+vary per play and need nothing extra.
 
 ## Sound (use meaningfully, ≥5 effects)
 `SFX.play(name)` — UI: hover/click/select/button/tick/blip/move/flip/step/swap/type/
