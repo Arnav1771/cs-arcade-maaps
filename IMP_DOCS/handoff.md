@@ -1,6 +1,6 @@
 # Handoff — CS Arcade (MAAPS)
 
-_Last updated: 2026-07-10 · after prompt #5 (v3.2)_
+_Last updated: 2026-07-10 · after prompt #6 (v3.2, docs synced)_
 
 ## What this is
 A browser arcade of **15 educational computer-science games** for the **Maharaja

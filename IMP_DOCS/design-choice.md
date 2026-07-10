@@ -1,6 +1,6 @@
 # Design Choices & Rationale — CS Arcade
 
-_Last updated: 2026-07-10 · v3.1_
+_Last updated: 2026-07-10 · v3.2_
 
 Each entry: **decision — why — alternatives rejected.**
 
@@ -39,6 +39,15 @@ User: "add a timer in all games for a fair game." Same time budget everywhere �
 normalized score compares like-with-like. Implemented once in `Arcade.mount` so all 15
 games behave identically (rather than editing 15 games). Timer starts when the tutorial
 is dismissed, so reading the how-to is free.
+
+### Randomize level order per player — but tiered (v3.2)
+User wanted level-wise games to randomize levels per student (anti-copying, like the
+quiz). A full shuffle would break the easy→hard ramp (a beginner could get the hardest
+puzzle first). So authored-level games (logic-lab, robot-runner, cipher-crack,
+tower-master) use `Arcade.shuffleTiered(arr, 5)` — shuffle **within bands of 5** so
+difficulty still climbs while the exact order differs every load. Procedurally-generated
+games already vary per play, so they were left as-is. Rejected: full random shuffle (bad
+ramp); per-user seeded-but-stable order (needless complexity for a booth).
 
 ### Central tutorials (content in arcade.js, keyed by slug)
 User wanted a tutorial per game. Centralizing avoids rewriting 15 games and guarantees a

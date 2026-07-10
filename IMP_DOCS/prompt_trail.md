@@ -55,6 +55,12 @@ patterns).
 arrays on load, so each new student gets a different order. **Verified:** node syntax +
 jsdom smoke (all four load/start clean); deployed as Arnav1771.
 
+## Prompt #6 — Keep IMP_DOCS in check & push (docs only)
+**Ask:** keep the IMP_DOCS current "till now" and push them.
+**Done:** verified working tree clean and all 6 docs live on GitHub; back-filled the
+level-randomization decision into `design-choice.md` (was still tagged v3.1) and bumped
+its date; logged this entry. No code/state change. Committed & pushed as Arnav1771.
+
 ---
 _Template for the next entry:_
 ## Prompt #N — <short title> (→ vX)
