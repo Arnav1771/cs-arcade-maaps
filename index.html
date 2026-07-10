@@ -66,6 +66,34 @@
   .play { position: absolute; bottom: 16px; right: 16px; font-size: 13px; font-weight: 800; color: var(--ink); opacity: 0; transform: translateX(-6px); transition: .2s; }
   .card:hover .play { opacity: 1; transform: translateX(0); }
 
+  /* ---- smooth + epic selection ---- */
+  .card { transition: transform .22s cubic-bezier(.2,.8,.3,1.25), border-color .2s, box-shadow .25s, opacity .25s, filter .25s; }
+  @keyframes selpop { 0%{ transform:scale(.94); } 55%{ transform:translateY(-7px) scale(1.07); } 100%{ transform:translateY(-4px) scale(1.03); } }
+  @keyframes checkpop { 0%{ transform:scale(0) rotate(-45deg); } 60%{ transform:scale(1.35) rotate(10deg); } 100%{ transform:scale(1) rotate(0); } }
+  body.mode-select .card.sel { transform: translateY(-4px) scale(1.03); border-color: var(--glow); box-shadow: 0 0 0 3px var(--glow) inset, 0 18px 46px rgba(0,0,0,.55); animation: selpop .34s ease; }
+  body.mode-select .card.sel .check { background: var(--glow); border-color: var(--glow); box-shadow: 0 0 18px var(--glow); animation: checkpop .36s ease; }
+  body.mode-select .card:not(.sel):hover { border-color: var(--glow); }
+  @keyframes readypulse { 0%,100%{ box-shadow:0 0 0 0 rgba(56,189,248,.55); } 50%{ box-shadow:0 0 0 12px rgba(56,189,248,0); } }
+  body.mode-select.full .confirm button:not(:disabled) { animation: readypulse 1.3s infinite; }
+
+  /* ---- locked games (not in your chosen 4) ---- */
+  .card .lock { position:absolute; inset:0; display:none; align-items:center; justify-content:center; font-size:36px; z-index:2;
+    background:rgba(4,7,18,.55); border-radius:20px; }
+  body.mode-play .card.locked { opacity:.5; filter:grayscale(.6); }
+  body.mode-play .card.locked .lock { display:flex; }
+  body.mode-play .card.locked:hover { transform:none; box-shadow:none; border-color:var(--line); }
+  body.mode-play .card.locked:hover::before { opacity:0; }
+  body.mode-play .card.locked .play { display:none; }
+  @keyframes cardshake { 10%,90%{ transform:translateX(-2px); } 30%,70%{ transform:translateX(6px); } 50%{ transform:translateX(-9px); } }
+  .card.shake { animation: cardshake .45s ease; }
+
+  /* toast */
+  #toast { position:fixed; left:50%; bottom:98px; transform:translateX(-50%) translateY(18px); z-index:60;
+    background:#0d1430; border:1px solid var(--line); color:var(--ink); font-weight:700; font-size:13.5px;
+    padding:12px 18px; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.5); opacity:0; pointer-events:none;
+    transition:opacity .25s, transform .25s; max-width:90vw; text-align:center; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
   /* confirm bar (select mode) */
   .confirm { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: none; justify-content: center; padding: 14px; background: linear-gradient(0deg, rgba(7,11,26,0.97), rgba(7,11,26,0.0)); }
   body.mode-select .confirm { display: flex; }
@@ -108,6 +136,7 @@
   <div class="banner"><div class="box" id="bannerBox"></div></div>
 
   <main class="grid" id="grid"></main>
+  <div id="toast"></div>
 
   <div class="confirm"><div class="inner">
     <span class="count">Picked <b id="selCount">0</b> / 4 games</span>
@@ -143,6 +172,10 @@
 
     function bySlug(s) { for (var i = 0; i < CS_GAMES.length; i++) if (CS_GAMES[i].slug === s) return CS_GAMES[i]; return null; }
 
+    var toastEl = document.getElementById('toast'); var toastT;
+    function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove('show'); }, 2800); }
+    function shake(el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); setTimeout(function () { el.classList.remove('shake'); }, 500); }
+
     function buildCards() {
       grid.innerHTML = '';
       CS_GAMES.forEach(function (g, i) {
@@ -154,6 +187,7 @@
         a.innerHTML =
           '<span class="check"></span>' +
           '<span class="star">★ In your 4</span>' +
+          '<span class="lock">🔒</span>' +
           '<span class="num">' + String(i + 1).padStart(2, '0') + '</span>' +
           '<div class="icon">' + g.icon + '</div>' +
           '<h3>' + g.title + '</h3>' +
@@ -162,8 +196,14 @@
           '<span class="play">Play ▶</span>';
         a.addEventListener('mouseenter', function () { SFX.play('hover'); });
         a.addEventListener('click', function (e) {
-          if (mode === 'select') { e.preventDefault(); toggleSelect(g.slug); }
-          else { SFX.play('select'); }
+          if (mode === 'select') { e.preventDefault(); toggleSelect(g.slug); return; }
+          // play mode: only the 4 chosen games open
+          if (selected.indexOf(g.slug) < 0) {
+            e.preventDefault(); SFX.play('error'); shake(a);
+            toast('🔒 “' + g.title + '” isn’t in your 4. Tap “Change my 4” to swap it in.');
+            return;
+          }
+          SFX.play('select');
         });
         grid.appendChild(a);
       });
@@ -188,6 +228,7 @@
         var chosen = selected.indexOf(s) >= 0;
         c.classList.toggle('sel', chosen && mode === 'select');
         c.classList.toggle('inmission', chosen && mode === 'play');
+        c.classList.toggle('locked', mode === 'play' && !chosen);   // lock non-chosen games in play mode
         var chk = c.querySelector('.check'); if (chk) chk.textContent = chosen ? '✓' : '';
       });
       selCountEl.textContent = selected.length;
